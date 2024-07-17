@@ -6,3 +6,17 @@ INSERT OVERWRITE LOCAL DIRECTORY '/home/user/employees_data'
 ROW FORMAT DELIMITED
 FIELDS TERMINATED BY ','
 SELECT * FROM employees;
+
+#!/bin/bash
+# Extract job names and target table names from JIL file
+
+# Define the JIL file
+JIL_FILE="all_jobs.jil"
+
+# Parse the JIL file
+awk '
+BEGIN { FS=": " }
+/insert_job/ { job_name=$2 }
+/command/ { command=$2; print job_name, command }
+' $JIL_FILE > job_details.txt
+
