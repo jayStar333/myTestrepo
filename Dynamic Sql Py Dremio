@@ -1,0 +1,53 @@
+import requests
+import json
+
+# Step 1: Install Required Libraries
+# pip install requests
+
+# Step 2: Set Up Authentication
+dremio_url = 'http://your_dremio_host:9047'
+bearer_token = 'your_personal_access_token'
+
+# Step 3: List Virtual Datasets within a Space
+space_name = 'your_space_name'
+catalog_response = requests.get(
+    f'{dremio_url}/api/v3/catalog/by-path/{space_name}',
+    headers={'Authorization': f'Bearer {bearer_token}'}
+)
+datasets = catalog_response.json()['children']
+
+# Step 4: Construct and Execute Dynamic SQL for each dataset
+for dataset in datasets:
+    if dataset['type'] == 'VIRTUAL_DATASET':
+        dataset_path = dataset['path']
+        dataset_name = '.'.join(dataset_path)
+        
+        # Construct SQL query
+        field_name = 'your_field_name'
+        dynamic_sql = f"""
+        SELECT 
+            MAX({field_name}) AS max_value, 
+            COUNT({field_name}) AS count_value 
+        FROM {dataset_name}
+        """
+        
+        # Execute the query
+        query_response = requests.post(
+            f'{dremio_url}/api/v3/sql',
+            headers={
+                'Content-Type': 'application/json',
+                'Authorization': f'Bearer {bearer_token}'
+            },
+            data=json.dumps({'sql': dynamic_sql})
+        )
+        
+        # Fetch and print results
+        query_result = query_response.json()
+        print(f"Results for {dataset_name}:")
+        print(json.dumps(query_result, indent=4))
+
+# Handle errors
+if catalog_response.status_code != 200:
+    print(f"Error: {catalog_response.json()['errorMessage']}")
+if query_response.status_code != 200:
+    print(f"Error: {query_response.json()['errorMessage']}")
