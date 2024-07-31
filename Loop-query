@@ -1,0 +1,41 @@
+import requests
+import json
+import pandas as pd
+
+# Replace with your Dremio server and PAT
+dremio_server = 'http://<server>:9047'
+pat = '<your_personal_access_token>'
+
+headers = {
+    'Authorization': f'Bearer {pat}',
+    'Content-Type': 'application/json'
+}
+
+def execute_sql(query):
+    url = f'{dremio_server}/api/v3/sql'
+    payload = {
+        'sql': query
+    }
+    response = requests.post(url, headers=headers, data=json.dumps(payload))
+    return response.json()
+
+# Example query to get a list of items
+query = "SELECT DISTINCT field_name FROM information_schema.virtual_datasets"
+result = execute_sql(query)
+items = [row['field_name'] for row in result['rows']]
+
+def query_item(item):
+    query = f"SELECT * FROM your_table WHERE field_name = '{item}'"
+    return execute_sql(query)
+
+results = []
+for item in items:
+    result = query_item(item)
+    results.extend(result['rows'])
+
+# Convert the results to a DataFrame
+df = pd.DataFrame(results)
+
+# Compile all results into a single table
+final_table = df.reset_index(drop=True)
+print(final_table)
