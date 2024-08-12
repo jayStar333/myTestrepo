@@ -1,0 +1,32 @@
+-- Define variables
+DECLARE @FilePath NVARCHAR(255) = 'C:\Path\To\YourFile.csv';
+DECLARE @TableName NVARCHAR(255) = 'YourNewTable';
+
+-- Create a temporary table to hold the CSV data
+CREATE TABLE #CSVData (
+    Line NVARCHAR(MAX)
+);
+
+-- Bulk insert the CSV data into the temporary table
+BULK INSERT #CSVData
+FROM @FilePath
+WITH (
+    FIELDTERMINATOR = ',',
+    ROWTERMINATOR = '\n',
+    FIRSTROW = 2
+);
+
+-- Extract column names from the first row
+DECLARE @Columns NVARCHAR(MAX);
+SELECT TOP 1 @Columns = Line FROM #CSVData;
+
+-- Create the new table dynamically
+DECLARE @CreateTableSQL NVARCHAR(MAX) = 'CREATE TABLE ' + @TableName + ' (' + @Columns + ' NVARCHAR(MAX))';
+EXEC sp_executesql @CreateTableSQL;
+
+-- Insert data into the new table
+DECLARE @InsertSQL NVARCHAR(MAX) = 'INSERT INTO ' + @TableName + ' SELECT * FROM #CSVData';
+EXEC sp_executesql @InsertSQL;
+
+-- Clean up
+DROP TABLE #CSVData;
