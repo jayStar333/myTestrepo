@@ -1,53 +1,84 @@
 import requests
-import json
+import pandas as pd
 
-# Step 1: Install Required Libraries
-# pip install requests
+# Set up the authentication
+headers = {
+    'Authorization': 'Bearer YOUR_PERSONAL_ACCESS_TOKEN'
+}
 
-# Step 2: Set Up Authentication
-dremio_url = 'http://your_dremio_host:9047'
-bearer_token = 'your_personal_access_token'
+# Base URL for Dremio API
+base_url = 'https://your-dremio-instance.com/api/v3'
 
-# Step 3: List Virtual Datasets within a Space
-space_name = 'your_space_name'
-catalog_response = requests.get(
-    f'{dremio_url}/api/v3/catalog/by-path/{space_name}',
-    headers={'Authorization': f'Bearer {bearer_token}'}
-)
-datasets = catalog_response.json()['children']
+# Query to get the list of VDS paths and names
+query = """
+SELECT path, name
+FROM your_vds_with_paths_and_names;
+"""
 
-# Step 4: Construct and Execute Dynamic SQL for each dataset
-for dataset in datasets:
-    if dataset['type'] == 'VIRTUAL_DATASET':
-        dataset_path = dataset['path']
-        dataset_name = '.'.join(dataset_path)
-        
-        # Construct SQL query
-        field_name = 'your_field_name'
-        dynamic_sql = f"""
-        SELECT 
-            MAX({field_name}) AS max_value, 
-            COUNT({field_name}) AS count_value 
-        FROM {dataset_name}
-        """
-        
-        # Execute the query
-        query_response = requests.post(
-            f'{dremio_url}/api/v3/sql',
-            headers={
-                'Content-Type': 'application/json',
-                'Authorization': f'Bearer {bearer_token}'
-            },
-            data=json.dumps({'sql': dynamic_sql})
-        )
-        
-        # Fetch and print results
-        query_result = query_response.json()
-        print(f"Results for {dataset_name}:")
-        print(json.dumps(query_result, indent=4))
+# Execute the query
+response = requests.post(f'{base_url}/sql', headers=headers, json={'sql': query})
+vds_list = response.json()['rows']
+# Calculate the date 7 days ago
+from datetime import datetime, timedelta
+seven_days_ago = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d')
 
-# Handle errors
-if catalog_response.status_code != 200:
-    print(f"Error: {catalog_response.json()['errorMessage']}")
-if query_response.status_code != 200:
-    print(f"Error: {query_response.json()['errorMessage']}")
+# Template for the query
+query_template = """
+SELECT 
+    your_date_column, 
+    COUNT(*) AS count_per_date
+FROM 
+    "{vds_path}"
+WHERE 
+    your_date_column >= '{seven_days_ago}'
+GROUP BY 
+    your_date_column
+ORDER BY 
+    your_date_column;
+"""
+
+# Initialize an empty DataFrame to store results
+results_df = pd.DataFrame()
+
+for vds in vds_list:
+    query = query_template.format(vds_path=vds['path'], seven_days_ago=seven_days_ago)
+    response = requests.post(f'{base_url}/sql', headers=headers, json={'sql': query})
+    data = response.json()['rows']
+    df = pd.DataFrame(data)
+    df['vds'] = vds['name']
+    results_df = pd.concat([results_df, df], ignore_index=True)
+pivot_df = results_df.pivot(index='vds', columns='your_date_column', values='count_per_date').fillna(0)
+combined_df = pivot_df.reset_index()
+html_table = combined_df.to_html(classes='table table-striped', index=False)
+
+# Define CSS styles
+css = """
+<style>
+    .table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    .table th, .table td {
+        border: 1px solid #ddd;
+        padding: 8px;
+    }
+    .table th {
+        background-color: #f2f2f2;
+        text-align: center;
+    }
+    .table tr:nth-child(even) {
+        background-color: #f9f9f9;
+    }
+    .table tr:hover {
+        background-color: #ddd;
+    }
+</style>
+"""
+
+# Combine HTML and CSS
+html_output = css + html_table
+
+# Save to an HTML file
+with open('output.html', 'w') as file:
+    file.write(html_output)
+
