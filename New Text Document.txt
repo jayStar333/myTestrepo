@@ -1,32 +1,43 @@
--- Define variables
-DECLARE @FilePath NVARCHAR(255) = 'C:\Path\To\YourFile.csv';
-DECLARE @TableName NVARCHAR(255) = 'YourNewTable';
+```python
+import pandas as pd
+import requests
+from datetime import datetime, timedelta
 
--- Create a temporary table to hold the CSV data
-CREATE TABLE #CSVData (
-    Line NVARCHAR(MAX)
-);
+# Generate date range for the past 7 days
+end_date = datetime.today()
+start_date = end_date - timedelta(days=6)
+date_range = pd.date_range(start=start_date, end=end_date)
 
--- Bulk insert the CSV data into the temporary table
-BULK INSERT #CSVData
-FROM @FilePath
-WITH (
-    FIELDTERMINATOR = ',',
-    ROWTERMINATOR = '\n',
-    FIRSTROW = 2
-);
+# Dremio connection details
+url = "https://your-dremio-endpoint/api/v3/sql"
+headers = {
+    "Authorization": "Bearer YOUR_PERSONAL_ACCESS_TOKEN",
+    "Content-Type": "application/json"
+}
 
--- Extract column names from the first row
-DECLARE @Columns NVARCHAR(MAX);
-SELECT TOP 1 @Columns = Line FROM #CSVData;
+# SQL query to get VDS data
+query = f"""
+SELECT vds, vds_path, date, COUNT(*) as count
+FROM your_table
+WHERE date BETWEEN '{start_date.strftime('%Y-%m-%d')}' AND '{end_date.strftime('%Y-%m-%d')}'
+GROUP BY vds, vds_path, date
+"""
 
--- Create the new table dynamically
-DECLARE @CreateTableSQL NVARCHAR(MAX) = 'CREATE TABLE ' + @TableName + ' (' + @Columns + ' NVARCHAR(MAX))';
-EXEC sp_executesql @CreateTableSQL;
+# Execute the query
+response = requests.post(url, headers=headers, json={"sql": query}, verify=False)
 
--- Insert data into the new table
-DECLARE @InsertSQL NVARCHAR(MAX) = 'INSERT INTO ' + @TableName + ' SELECT * FROM #CSVData';
-EXEC sp_executesql @InsertSQL;
+# Check for successful response
+if response.status_code == 200:
+    data = response.json()['rows']
+    df = pd.DataFrame(data)
 
--- Clean up
-DROP TABLE #CSVData;
+    # Pivot the data
+    pivot_df = df.pivot_table(index='vds', columns='date', values='count', fill_value=0)
+
+    # Convert to HTML with CSS styling
+    html_table = pivot_df.to_html(classes='table table-striped', index=False, border=0)
+    print(html_table)
+else:
+    print("Failed to query data:", response.text)
+
+```
