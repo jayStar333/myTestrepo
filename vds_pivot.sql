@@ -1,54 +1,48 @@
-WITH virtual_datasets AS (
-SELECT
-TABLE_SCHEMA,
-TABLE_NAME
-FROM
-INFORMATION_SCHEMA."TABLES"
-WHERE
-TABLE_TYPE = 'VIEW'
-AND TABLE_SCHEMA = 'your_space_name'
-),
-dataset_info AS (
-SELECT
-vd.TABLE_SCHEMA,
-vd.TABLE_NAME,
-COUNT(*) AS row_count,
-MAX(CASE WHEN c.COLUMN_NAME LIKE '%date%' THEN c.COLUMN_NAME ELSE NULL END) AS date_column
-FROM
-virtual_datasets vd
-JOIN
-INFORMATION_SCHEMA."COLUMNS" c
-ON
-vd.TABLE_SCHEMA = c.TABLE_SCHEMA
-AND vd.TABLE_NAME = c.TABLE_NAME
-GROUP BY
-vd.TABLE_SCHEMA, vd.TABLE_NAME
+import pyodbc
+from datetime import datetime, timedelta
+import pandas as pd
+
+# Dremio connection details
+conn = pyodbc.connect(
+    "Driver={Dremio ODBC Driver 64-bit};"
+    "ConnectionType=Direct;"
+    "HOST=your_host;"
+    "PORT=31010;"
+    "AuthenticationType=Plain;"
+    "UID=your_username;"
+    "PWD=your_personal_access_token;"
+    "SSL=1;"
+    "SSLTrustStorePath=path_to_truststore;"
 )
-SELECT
-TABLE_SCHEMA,
-TABLE_NAME,
-row_count,
-date_column,
-TABLE_NAME AS view_name
-FROM
-dataset_info;
 
---Pivot
+cursor = conn.cursor()
 
-SELECT
-date_column,
-MAX(CASE WHEN view_name = 'dataset1' THEN row_count ELSE NULL END) AS dataset1,
-MAX(CASE WHEN view_name = 'dataset2' THEN row_count ELSE NULL END) AS dataset2,
--- Add more datasets as needed
-FROM (
-SELECT
-TABLE_SCHEMA,
-TABLE_NAME,
-row_count,
-date_column,
-TABLE_NAME AS view_name
-FROM
-dataset_info
-) AS source
-GROUP BY
-date_column;
+# Define the date range
+start_date = datetime(2023, 1, 1)
+end_date = datetime(2023, 1, 10)
+date_range = [start_date + timedelta(days=x) for x in range((end_date - start_date).days + 1)]
+
+# Retrieve the list of table names
+cursor.execute("SELECT table_name FROM information_schema.tables WHERE table_schema = 'your_schema'")
+table_names = [row.table_name for row in cursor.fetchall()]
+
+# Initialize a DataFrame to store the results
+results_df = pd.DataFrame(columns=['Table', 'Date', 'RowCount'])
+
+# Iterate over each table name and date
+for table in table_names:
+    for date in date_range:
+        query = f"""
+        SELECT COUNT(*) FROM your_schema.{table}
+        WHERE DATE(column_name) = '{date.strftime('%Y-%m-%d')}'
+        """
+        cursor.execute(query)
+        row_count = cursor.fetchone()[0]
+        results_df = results_df.append({'Table': table, 'Date': date.strftime('%Y-%m-%d'), 'RowCount': row_count}, ignore_index=True)
+
+# Close the cursor and connection
+cursor.close()
+conn.close()
+
+# Display the combined results
+print(results_df)
