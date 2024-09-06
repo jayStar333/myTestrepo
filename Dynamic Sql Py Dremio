@@ -1,84 +1,28 @@
-import requests
+import pyodbc
 import pandas as pd
 
-# Set up the authentication
-headers = {
-    'Authorization': 'Bearer YOUR_PERSONAL_ACCESS_TOKEN'
-}
+# Step 1: Connect to the database
+conn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER=your_server;DATABASE=your_db;UID=your_user;PWD=your_password')
 
-# Base URL for Dremio API
-base_url = 'https://your-dremio-instance.com/api/v3'
+# Step 2: Fetch table names
+cursor = conn.cursor()
+cursor.execute("SELECT table_name FROM information_schema.tables WHERE table_type = 'BASE TABLE'")
+tables = cursor.fetchall()
 
-# Query to get the list of VDS paths and names
-query = """
-SELECT path, name
-FROM your_vds_with_paths_and_names;
-"""
+# Step 3: Query each table and combine results
+queries = []
+column_name = 'your_column'  # Replace with your column name
 
-# Execute the query
-response = requests.post(f'{base_url}/sql', headers=headers, json={'sql': query})
-vds_list = response.json()['rows']
-# Calculate the date 7 days ago
-from datetime import datetime, timedelta
-seven_days_ago = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d')
+for table in tables:
+    table_name = table[0]
+    query = f"SELECT '{table_name}' AS table_name, {column_name} FROM {table_name}"
+    queries.append(query)
 
-# Template for the query
-query_template = """
-SELECT 
-    your_date_column, 
-    COUNT(*) AS count_per_date
-FROM 
-    "{vds_path}"
-WHERE 
-    your_date_column >= '{seven_days_ago}'
-GROUP BY 
-    your_date_column
-ORDER BY 
-    your_date_column;
-"""
+# Combine all queries with UNION ALL
+final_query = " UNION ALL ".join(queries)
 
-# Initialize an empty DataFrame to store results
-results_df = pd.DataFrame()
+# Execute the final query
+df = pd.read_sql(final_query, conn)
 
-for vds in vds_list:
-    query = query_template.format(vds_path=vds['path'], seven_days_ago=seven_days_ago)
-    response = requests.post(f'{base_url}/sql', headers=headers, json={'sql': query})
-    data = response.json()['rows']
-    df = pd.DataFrame(data)
-    df['vds'] = vds['name']
-    results_df = pd.concat([results_df, df], ignore_index=True)
-pivot_df = results_df.pivot(index='vds', columns='your_date_column', values='count_per_date').fillna(0)
-combined_df = pivot_df.reset_index()
-html_table = combined_df.to_html(classes='table table-striped', index=False)
-
-# Define CSS styles
-css = """
-<style>
-    .table {
-        width: 100%;
-        border-collapse: collapse;
-    }
-    .table th, .table td {
-        border: 1px solid #ddd;
-        padding: 8px;
-    }
-    .table th {
-        background-color: #f2f2f2;
-        text-align: center;
-    }
-    .table tr:nth-child(even) {
-        background-color: #f9f9f9;
-    }
-    .table tr:hover {
-        background-color: #ddd;
-    }
-</style>
-"""
-
-# Combine HTML and CSS
-html_output = css + html_table
-
-# Save to an HTML file
-with open('output.html', 'w') as file:
-    file.write(html_output)
-
+# Step 4: Display the DataFrame
+print(df)
