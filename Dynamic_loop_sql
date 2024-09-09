@@ -1,0 +1,42 @@
+import pyodbc
+import pandas as pd
+
+# Connection details
+host = 'your_host'
+port = 'your_port'
+uid = 'your_user'
+pwd = 'your_password'
+driver = 'your_driver'  # e.g., 'Dremio ODBC Driver 64-bit'
+
+# Establish connection
+cnxn = pyodbc.connect(
+    f"Driver={driver};ConnectionType=Direct;HOST={host};PORT={port};AuthenticationType=Plain;UID={uid};PWD={pwd}",
+    autocommit=True
+)
+
+# SQL query to get the list of virtual datasets
+list_query = "SELECT dataset_name FROM your_dataset_list_table"
+
+# Execute the list query and fetch the results
+datasets_df = pd.read_sql(list_query, cnxn)
+virtual_datasets = datasets_df['dataset_name'].tolist()
+
+# SQL query template to run on each dataset
+query_template = "SELECT * FROM {}"
+
+# Collect results
+results = []
+
+for dataset in virtual_datasets:
+    query = query_template.format(dataset)
+    df = pd.read_sql(query, cnxn)
+    results.append(df)
+
+# Union all results into a single DataFrame
+final_result = pd.concat(results, ignore_index=True)
+
+# Optionally, save the result to a CSV file
+final_result.to_csv('final_result.csv', index=False)
+
+# Close the connection
+cnxn.close()
