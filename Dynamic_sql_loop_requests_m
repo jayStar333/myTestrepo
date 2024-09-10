@@ -49,9 +49,10 @@ for result in results:
 
 ```
 ##2nd Option:_____________________
-import requests
+ import requests
 import pandas as pd
 import json
+from datetime import datetime, timedelta
 
 # Dremio connection details
 base_url = 'http://your_dremio_host:9047'
@@ -66,11 +67,12 @@ headers = {
 # SQL query to get the list of virtual datasets
 list_query = "SELECT dataset_name FROM your_dataset_list_table"
 
-# Execute the list query
+# Execute the list query with SSL verification disabled
 list_response = requests.post(
     f'{base_url}/api/v3/sql',
     headers=headers,
-    data=json.dumps({'sql': list_query})
+    data=json.dumps({'sql': list_query}),
+    verify=False  # Disable SSL verification
 )
 
 # Check if the response is valid JSON
@@ -83,29 +85,34 @@ except json.JSONDecodeError:
     print(list_response.text)
     raise
 
-# SQL query template to run on each dataset
-query_template = "SELECT * FROM {}"
+# Generate a list of the 7 most recent dates
+recent_dates = [(datetime.now() - timedelta(days=i)).strftime('%Y-%m-%d') for i in range(7)]
+
+# SQL query template to run on each dataset for each date
+query_template = "SELECT * FROM {} WHERE date_column = '{}'"
 
 # Collect results
 results = []
 
 for dataset in virtual_datasets:
-    query = query_template.format(dataset)
-    query_response = requests.post(
-        f'{base_url}/api/v3/sql',
-        headers=headers,
-        data=json.dumps({'sql': query})
-    )
-    
-    # Check if the response is valid JSON
-    try:
-        query_response_json = query_response.json()
-        df = pd.json_normalize(query_response_json['rows'])
-        results.append(df)
-    except json.JSONDecodeError:
-        print(f"Error decoding JSON response for dataset {dataset}. Response content:")
-        print(query_response.text)
-        continue
+    for date in recent_dates:
+        query = query_template.format(dataset, date)
+        query_response = requests.post(
+            f'{base_url}/api/v3/sql',
+            headers=headers,
+            data=json.dumps({'sql': query}),
+            verify=False  # Disable SSL verification
+        )
+        
+        # Check if the response is valid JSON
+        try:
+            query_response_json = query_response.json()
+            df = pd.json_normalize(query_response_json['rows'])
+            results.append(df)
+        except json.JSONDecodeError:
+            print(f"Error decoding JSON response for dataset {dataset} on date {date}. Response content:")
+            print(query_response.text)
+            continue
 
 # Union all results into a single DataFrame
 final_result = pd.concat(results, ignore_index=True)
@@ -114,3 +121,4 @@ final_result = pd.concat(results, ignore_index=True)
 final_result.to_csv('final_result.csv', index=False)
 
 print("Query results have been saved to 'final_result.csv'")
+
