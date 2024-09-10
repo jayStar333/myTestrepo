@@ -55,21 +55,12 @@ import json
 
 # Dremio connection details
 base_url = 'http://your_dremio_host:9047'
-username = 'your_username'
-password = 'your_password'
+pat_token = 'your_personal_access_token'
 
-# Authenticate and get the token
-auth_response = requests.post(
-    f'{base_url}/apiv2/login',
-    headers={'Content-Type': 'application/json'},
-    data=json.dumps({'userName': username, 'password': password})
-)
-auth_token = auth_response.json()['token']
-
-# Headers for subsequent requests
+# Headers for requests
 headers = {
     'Content-Type': 'application/json',
-    'Authorization': f'_dremio{auth_token}'
+    'Authorization': f'_dremio{pat_token}'
 }
 
 # SQL query to get the list of virtual datasets
