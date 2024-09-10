@@ -49,76 +49,51 @@ for result in results:
 
 ```
 ##2nd Option:_____________________
- import requests
+import pyodbc
 import pandas as pd
-import json
 from datetime import datetime, timedelta
 
-# Dremio connection details
-base_url = 'http://your_dremio_host:9047'
-pat_token = 'your_personal_access_token'
+# Establish connection to Dremio
+connection_string = "Driver={Dremio ODBC Driver 64-bit};ConnectionType=Direct;HOST=your_host;PORT=your_port;AuthenticationType=Plain;UID=your_uid;PWD=your_pwd;ssl=true;"
+cnxn = pyodbc.connect(connection_string, autocommit=True)
+cursor = cnxn.cursor()
 
-# Headers for requests
-headers = {
-    'Content-Type': 'application/json',
-    'Authorization': f'_dremio{pat_token}'
-}
+# Step 1: Retrieve the list of virtual datasets
+initial_query = "SELECT column1, column2 FROM your_table"
+cursor.execute(initial_query)
+virtual_datasets = cursor.fetchall()
 
-# SQL query to get the list of virtual datasets
-list_query = "SELECT dataset_name FROM your_dataset_list_table"
+# Step 2: Generate a list of the last 7 dates
+last_7_dates = [(datetime.now() - timedelta(days=i)).strftime('%Y-%m-%d') for i in range(7)]
 
-# Execute the list query with SSL verification disabled
-list_response = requests.post(
-    f'{base_url}/api/v3/sql',
-    headers=headers,
-    data=json.dumps({'sql': list_query}),
-    verify=False  # Disable SSL verification
-)
-
-# Check if the response is valid JSON
-try:
-    list_response_json = list_response.json()
-    datasets_df = pd.json_normalize(list_response_json['rows'])
-    virtual_datasets = datasets_df['dataset_name'].tolist()
-except json.JSONDecodeError:
-    print("Error decoding JSON response. Response content:")
-    print(list_response.text)
-    raise
-
-# Generate a list of the 7 most recent dates
-recent_dates = [(datetime.now() - timedelta(days=i)).strftime('%Y-%m-%d') for i in range(7)]
-
-# SQL query template to run on each dataset for each date
-query_template = "SELECT * FROM {} WHERE date_column = '{}'"
-
-# Collect results
-results = []
-
+# Step 3: Query each virtual dataset and union the results
+union_query = ""
 for dataset in virtual_datasets:
-    for date in recent_dates:
-        query = query_template.format(dataset, date)
-        query_response = requests.post(
-            f'{base_url}/api/v3/sql',
-            headers=headers,
-            data=json.dumps({'sql': query}),
-            verify=False  # Disable SSL verification
-        )
-        
-        # Check if the response is valid JSON
-        try:
-            query_response_json = query_response.json()
-            df = pd.json_normalize(query_response_json['rows'])
-            results.append(df)
-        except json.JSONDecodeError:
-            print(f"Error decoding JSON response for dataset {dataset} on date {date}. Response content:")
-            print(query_response.text)
-            continue
+    dataset_name = dataset[0]  # Assuming the dataset name is in the first column
+    other_column_value = dataset[1]  # Assuming the other column value is in the second column
+    query = f"""
+    SELECT *, '{other_column_value}' AS other_column FROM {dataset_name}
+    WHERE date_column IN ({', '.join([f"'{date}'" for date in last_7_dates])})
+    """
+    if union_query:
+        union_query += " UNION ALL "
+    union_query += query
 
-# Union all results into a single DataFrame
-final_result = pd.concat(results, ignore_index=True)
+# Step 4: Execute the union query and fetch the results
+cursor.execute(union_query)
+results = cursor.fetchall()
 
-# Optionally, save the result to a CSV file
-final_result.to_csv('final_result.csv', index=False)
+# Convert results to a pandas DataFrame
+df = pd.DataFrame([tuple(t) for t in results])
 
-print("Query results have been saved to 'final_result.csv'")
+# Step 5: Check if the DataFrame is empty
+if df.empty:
+    print("No data found for the given criteria.")
+else:
+    # Print the DataFrame or save it to a file
+    print(df)
+
+# Close the connection
+cursor.close()
+cnxn.close()
 
