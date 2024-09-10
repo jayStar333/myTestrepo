@@ -1,53 +1,53 @@
 ```python
-import requests
-import json
+import pyodbc
+import pandas as pd
+from datetime import datetime, timedelta
 
-# Configuration
-base_url = "http://dremio-server:9047"
-username = "your_username"
-password = "your_password"
+# Connect to Dremio
+conn = pyodbc.connect('DSN=Dremio;UID=your_username;PWD=your_password')
 
-# Authenticate and get token
-auth_response = requests.post(
-    f"{base_url}/apiv2/login",
-    headers={"Content-Type": "application/json"},
-    data=json.dumps({"userName": username, "password": password})
-)
-auth_token = auth_response.json()['token']
+# Define a function to check if a DataFrame is empty
+def is_dataframe_empty(df):
+    return df.empty
 
-# Get list of virtual datasets
-headers = {"Authorization": f"_dremio{auth_token}"}
-vds_query = "SELECT dataset_name FROM your_dataset_list_table"
-vds_response = requests.post(
-    f"{base_url}/api/v3/sql",
-    headers=headers,
-    data=json.dumps({"sql": vds_query})
-)
-vds_list = vds_response.json()['rows']
+# Get the list of virtual datasets and the other column
+query = "SELECT dataset_name, other_column FROM your_table"
+datasets_df = pd.read_sql(query, conn)
 
-# Query each virtual dataset and union results
-union_queries = []
-for vds in vds_list:
-    dataset_name = vds['dataset_name']
-    query = f"SELECT * FROM {dataset_name} WHERE your_conditions"
-    union_queries.append(query)
+# Generate a list of the last 7 dates
+last_7_dates = [(datetime.now() - timedelta(days=i)).strftime('%Y-%m-%d') for i in range(7)]
 
-# Combine queries with UNION ALL
-final_query = " UNION ALL ".join(union_queries)
+# Prepare to store results
+all_results = []
 
-# Execute the final union query
-final_response = requests.post(
-    f"{base_url}/api/v3/sql",
-    headers=headers,
-    data=json.dumps({"sql": final_query})
-)
-results = final_response.json()['rows']
+for index, row in datasets_df.iterrows():
+    dataset_name = row['dataset_name']
+    other_column = row['other_column']
+    
+    # Query each virtual dataset
+    for date in last_7_dates:
+        sql_query = f"""
+        SELECT * FROM {dataset_name}
+        WHERE date_column = '{date}' AND other_column = '{other_column}'
+        """
+        result_df = pd.read_sql(sql_query, conn)
+        
+        # Check if the result is empty
+        if not is_dataframe_empty(result_df):
+            all_results.append(result_df)
 
-# Process results
-for result in results:
-    print(result)
+# Union all results into a single DataFrame
+if all_results:
+    final_result = pd.concat(all_results, ignore_index=True)
+    print(final_result)
+else:
+    print("No data found for the given criteria.")
+
+# Close the connection
+conn.close()
 
 ```
+
 ##2nd Option:_____________________
 import pyodbc
 import pandas as pd
