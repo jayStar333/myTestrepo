@@ -72,8 +72,16 @@ list_response = requests.post(
     headers=headers,
     data=json.dumps({'sql': list_query})
 )
-datasets_df = pd.json_normalize(list_response.json()['rows'])
-virtual_datasets = datasets_df['dataset_name'].tolist()
+
+# Check if the response is valid JSON
+try:
+    list_response_json = list_response.json()
+    datasets_df = pd.json_normalize(list_response_json['rows'])
+    virtual_datasets = datasets_df['dataset_name'].tolist()
+except json.JSONDecodeError:
+    print("Error decoding JSON response. Response content:")
+    print(list_response.text)
+    raise
 
 # SQL query template to run on each dataset
 query_template = "SELECT * FROM {}"
@@ -88,8 +96,16 @@ for dataset in virtual_datasets:
         headers=headers,
         data=json.dumps({'sql': query})
     )
-    df = pd.json_normalize(query_response.json()['rows'])
-    results.append(df)
+    
+    # Check if the response is valid JSON
+    try:
+        query_response_json = query_response.json()
+        df = pd.json_normalize(query_response_json['rows'])
+        results.append(df)
+    except json.JSONDecodeError:
+        print(f"Error decoding JSON response for dataset {dataset}. Response content:")
+        print(query_response.text)
+        continue
 
 # Union all results into a single DataFrame
 final_result = pd.concat(results, ignore_index=True)
