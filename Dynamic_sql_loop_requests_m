@@ -76,4 +76,34 @@ headers = {
 list_query = "SELECT dataset_name FROM your_dataset_list_table"
 
 # Execute the list query
-list_response = requests
+list_response = requests.post(
+    f'{base_url}/api/v3/sql',
+    headers=headers,
+    data=json.dumps({'sql': list_query})
+)
+datasets_df = pd.json_normalize(list_response.json()['rows'])
+virtual_datasets = datasets_df['dataset_name'].tolist()
+
+# SQL query template to run on each dataset
+query_template = "SELECT * FROM {}"
+
+# Collect results
+results = []
+
+for dataset in virtual_datasets:
+    query = query_template.format(dataset)
+    query_response = requests.post(
+        f'{base_url}/api/v3/sql',
+        headers=headers,
+        data=json.dumps({'sql': query})
+    )
+    df = pd.json_normalize(query_response.json()['rows'])
+    results.append(df)
+
+# Union all results into a single DataFrame
+final_result = pd.concat(results, ignore_index=True)
+
+# Optionally, save the result to a CSV file
+final_result.to_csv('final_result.csv', index=False)
+
+print("Query results have been saved to 'final_result.csv'")
