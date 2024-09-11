@@ -10,12 +10,18 @@ headers = {
 def get_catalog_items(catalog_id):
     url = f"{dremio_url}/api/v3/catalog/{catalog_id}"
     response = requests.get(url, headers=headers)
-    return response.json()
+    if response.status_code == 200:
+        return response.json()
+    else:
+        print(f"Error: {response.status_code} - {response.text}")
+        return None
 
 def get_all_vds_paths(catalog_id, parent_path=""):
     catalog_items = get_catalog_items(catalog_id)
-    vds_paths = []
+    if not catalog_items:
+        return []
 
+    vds_paths = []
     for item in catalog_items.get("children", []):
         item_path = f"{parent_path}/{item['path'][-1]}"
         if item["type"] == "VIRTUAL_DATASET":
@@ -25,10 +31,24 @@ def get_all_vds_paths(catalog_id, parent_path=""):
 
     return vds_paths
 
+def extract_last_two_values_from_path(path):
+    components = path.strip("/").split("/")
+    return components[-2:] if len(components) >= 2 else components
+
 # Start from the root catalog
 root_catalog = get_catalog_items("")
-vds_paths = get_all_vds_paths(root_catalog["id"])
+if root_catalog:
+    print("Root catalog structure:", json.dumps(root_catalog, indent=2))  # Debugging step
+    root_catalog_id = root_catalog.get("id")
+    if root_catalog_id:
+        vds_paths = get_all_vds_paths(root_catalog_id)
+        extracted_values = [extract_last_two_values_from_path(path) for path in vds_paths]
 
-# Print all VDS paths
-for path in vds_paths:
-    print(path)
+        # Print the extracted values
+        for values in extracted_values:
+            print(values)
+    else:
+        print("Root catalog ID not found.")
+else:
+    print("No catalogs found.")
+
