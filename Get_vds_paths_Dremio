@@ -1,0 +1,34 @@
+import requests
+import json
+
+# Replace with your Dremio server URL and personal access token
+dremio_url = "https://your-dremio-server.com"
+headers = {
+    "Authorization": "Bearer your_personal_access_token"
+}
+
+def get_catalog_items(catalog_id):
+    url = f"{dremio_url}/api/v3/catalog/{catalog_id}"
+    response = requests.get(url, headers=headers)
+    return response.json()
+
+def get_all_vds_paths(catalog_id, parent_path=""):
+    catalog_items = get_catalog_items(catalog_id)
+    vds_paths = []
+
+    for item in catalog_items.get("children", []):
+        item_path = f"{parent_path}/{item['path'][-1]}"
+        if item["type"] == "VIRTUAL_DATASET":
+            vds_paths.append(item_path)
+        elif item["type"] == "CONTAINER":
+            vds_paths.extend(get_all_vds_paths(item["id"], item_path))
+
+    return vds_paths
+
+# Start from the root catalog
+root_catalog = get_catalog_items("")
+vds_paths = get_all_vds_paths(root_catalog["id"])
+
+# Print all VDS paths
+for path in vds_paths:
+    print(path)
