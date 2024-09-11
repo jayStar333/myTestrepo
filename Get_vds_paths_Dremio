@@ -16,6 +16,17 @@ def get_catalog_items(catalog_id):
         print(f"Error: {response.status_code} - {response.text}")
         return None
 
+def list_containers(catalog_id):
+    catalog_items = get_catalog_items(catalog_id)
+    if not catalog_items:
+        return []
+
+    containers = []
+    for item in catalog_items.get("children", []):
+        if item["type"] == "CONTAINER":
+            containers.append(item)
+    return containers
+
 def get_all_vds_paths(catalog_id, parent_path=""):
     catalog_items = get_catalog_items(catalog_id)
     if not catalog_items:
@@ -41,7 +52,14 @@ if root_catalog:
     print("Root catalog structure:", json.dumps(root_catalog, indent=2))  # Debugging step
     root_catalog_id = root_catalog.get("id")
     if root_catalog_id:
-        vds_paths = get_all_vds_paths(root_catalog_id)
+        containers = list_containers(root_catalog_id)
+        print("Available containers:")
+        for container in containers:
+            print(f"ID: {container['id']}, Path: {'/'.join(container['path'])}")
+
+        # Select a specific container by ID or path
+        selected_container_id = "your_selected_container_id"  # Replace with the actual container ID
+        vds_paths = get_all_vds_paths(selected_container_id)
         extracted_values = [extract_last_two_values_from_path(path) for path in vds_paths]
 
         # Print the extracted values
@@ -51,4 +69,3 @@ if root_catalog:
         print("Root catalog ID not found.")
 else:
     print("No catalogs found.")
-
