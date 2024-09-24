@@ -6,7 +6,15 @@ df1 = pd.read_excel('workbook1.xlsx', sheet_name='Sheet1')
 df2 = pd.read_excel('workbook2.xlsx', sheet_name='Sheet1')
 
 # Combine the DataFrames
+#Concatenate
 combined_df = pd.concat([df1, df2])
+
+#Merge
+combined_df = pd.merge(df1, df2, on='common_column')
+
+#Join
+combined_df = df1.join(df2.set_index('common_column'), on='common_column')
+
 
 # Analyze the combined data
 summary = combined_df.describe()
