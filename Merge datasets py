@@ -1,0 +1,17 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# Read the Excel files
+df1 = pd.read_excel('workbook1.xlsx', sheet_name='Sheet1')
+df2 = pd.read_excel('workbook2.xlsx', sheet_name='Sheet1')
+
+# Combine the DataFrames
+combined_df = pd.concat([df1, df2])
+
+# Analyze the combined data
+summary = combined_df.describe()
+filtered_df = combined_df[combined_df['column_name'] > value]
+
+# Visualize the data
+combined_df['column_name'].plot(kind='bar')
+plt.show()
