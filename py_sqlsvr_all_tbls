@@ -1,0 +1,44 @@
+import pandas as pd
+import pyodbc
+from datetime import datetime, timedelta
+
+# Step 1: Read the CSV file
+csv_file_path = 'tables.csv'  # Replace with your actual CSV file path
+tables_df = pd.read_csv(csv_file_path)
+
+# Step 2: Generate a date range
+start_date = '2023-01-01'
+end_date = '2023-12-31'
+date_range = pd.date_range(start=start_date, end=end_date)
+date_df = pd.DataFrame(date_range, columns=['Date'])
+
+# Step 3: Count occurrences for each date in each table
+results = []
+
+# Connect to SQL Server
+conn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER=your_server;DATABASE=your_database;UID=your_username;PWD=your_password')
+
+for index, row in tables_df.iterrows():
+    table_name = row['TableName']
+    date_column = row['DateColumn']
+    query = f"SELECT {date_column} AS Date, COUNT(*) AS Count FROM {table_name} GROUP BY {date_column}"
+    df = pd.read_sql(query, conn)
+    df['Date'] = pd.to_datetime(df['Date'])
+    count_df = date_df.merge(df, on='Date', how='left').fillna(0)
+    count_df['Table'] = table_name
+    results.append(count_df)
+
+# Step 4: Include tables with no data
+for index, row in tables_df.iterrows():
+    table_name = row['TableName']
+    if not any(result['Table'].iloc[0] == table_name for result in results):
+        empty_df = date_df.copy()
+        empty_df['Count'] = 0
+        empty_df['Table'] = table_name
+        results.append(empty_df)
+
+# Step 5: Combine results
+final_df = pd.concat(results)
+
+# Display the result
+print(final_df)
