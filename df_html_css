@@ -65,5 +65,48 @@ html_output = f"""
 with open('styled_dataframe.html', 'w') as file:
     file.write(html_output)
 
+#Freeze header on html table
+#---------------------------------
+# Define custom CSS for the table
+css = """
+<style>
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+th, td {
+    border: 1px solid black;
+    padding: 8px;
+    text-align: left;
+}
+th {
+    background-color: #f2f2f2;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+</style>
+"""
+
+# Convert the styled DataFrame to HTML
+html_table = styled_df.to_html()
+
+# Add the CSS to the HTML table
+html_output = f"""
+<html>
+<head>
+<title>Styled DataFrame</title>
+{css}
+</head>
+<body>
+<h2>My DataFrame</h2>
+{html_table}
+</body>
+</html>
+"""
+
+# Save to an HTML file
+with open('styled_dataframe.html', 'w') as file:
+    file.write(html_output)
 
 
