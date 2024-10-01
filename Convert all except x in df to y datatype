@@ -15,4 +15,7 @@ exclude_columns = ['A', 'C']
 # Convert all columns except the excluded ones to a specific datatype (e.g., float)
 df.loc[:, ~df.columns.isin(exclude_columns)] = df.loc[:, ~df.columns.isin(exclude_columns)].astype(float)
 
+# Rename the column 'old_name' to 'new_name'
+df.rename(columns={'old_name': 'new_name'}, inplace=True)
+
 print(df)
