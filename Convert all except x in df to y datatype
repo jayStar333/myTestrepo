@@ -18,4 +18,10 @@ df.loc[:, ~df.columns.isin(exclude_columns)] = df.loc[:, ~df.columns.isin(exclud
 # Rename the column 'old_name' to 'new_name'
 df.rename(columns={'old_name': 'new_name'}, inplace=True)
 
+# Replace all values in column 'B' with the string 'fruit'
+df['B'] = df['B'].replace(df['B'].unique(), 'fruit')
+
+# Replace 'banana' with 'fruit' in column 'B'
+df['B'] = df['B'].replace('banana', 'fruit')
+
 print(df)
