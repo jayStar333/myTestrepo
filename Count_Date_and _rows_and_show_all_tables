@@ -52,14 +52,21 @@ for index, row in tables_df.iterrows():
 # Concatenate all results into a single DataFrame
 final_df = pd.concat(results, ignore_index=True)
 
+# Pivot the DataFrame
+pivot_df = final_df.pivot_table(index=['table_name'] + list(additional_fields.keys()), columns='date', values='row_count', fill_value=0).reset_index()
+
+# Replace NaN and ')' with a specific string in one of the string columns
+specific_string = 'SpecificString'
+pivot_df = pivot_df.replace({pd.NA: specific_string, ')': specific_string})
+
 # Close the database connection
 conn.close()
 
 # Save the final DataFrame to a CSV file
-final_df.to_csv('final_results.csv', index=False)
+pivot_df.to_csv('final_results.csv', index=False)
 
 # Create a CSS-styled HTML table
-html_output = final_df.to_html(classes='styled-table', index=False)
+html_output = pivot_df.to_html(classes='styled-table', index=False)
 
 # Add CSS styling with a banner at the top
 css = """
@@ -125,117 +132,8 @@ with open('output.html', 'w') as file:
 print("CSV file and HTML table with CSS styling have been generated and saved as 'final_results.csv' and 'output.html'.")
 
 
+
 #Method 2
-
-import pyodbc
-import pandas as pd
-import datetime
-import csv
-import os
-
-def query_sql_server(server, database, username, password, query):
-    """
-    Executes a SQL query against a specified SQL Server instance.
-
-    Args:
-        server: The SQL Server server name.
-        database: The database name.
-        username: The username for authentication.
-        password: The password for authentication.
-        query: The SQL query to execute.
-
-    Returns:
-        A pandas DataFrame containing the query results.
-    """
-
-    conn_str = (
-        r"DRIVER={ODBC Driver 17 for SQL Server};"
-        f"SERVER={server};"
-        f"DATABASE={database};"
-        f"UID={username};"
-        f"PWD={password}"
-    )
-
-    try:
-        conn = pyodbc.connect(conn_str)
-        df = pd.read_sql_query(query, conn)
-        conn.close()
-        return df
-    except pyodbc.Error as e:
-        print(f"Error connecting to SQL Server: {e}")
-        return None
-
-def generate_date_range(start_date, end_date):
-    """
-    Generates a list of dates within a specified range.
-
-    Args:
-        start_date: The start date (inclusive).
-        end_date: The end date (inclusive).
-
-    Returns:
-        A list of dates.
-    """
-
-    delta = end_date - start_date + datetime.timedelta(days=1)
-    return [start_date + datetime.timedelta(days=i) for i in range(delta.days)]
-
-def main():
-    # Replace with your SQL Server credentials and database name
-    server = "your_server_name"
-    database = "your_database_name"
-    username = "your_username"
-    password = "your_password"
-
-    # Replace with the path to your CSV file containing table names
-    table_file = "table_names.csv"
-
-    # Specify the start and end dates for the query
-    start_date = datetime.date(2024, 1, 1)  # Replace with your desired start date
-    end_date = datetime.date(2024, 12, 31)  # Replace with your desired end date
-
-    # Read table names from the CSV file
-    with open(table_file, 'r') as f:
-        table_names = [row.strip() for row in f]
-
-    # Create a list to store the query results
-    results = []
-
-    for table_name in table_names:
-        query = f"""
-            SELECT CAST(date_column AS DATE) AS date, COUNT(*) AS row_count
-            FROM {table_name}
-            WHERE date_column >= '{start_date}' AND date_column <= '{end_date}'
-            GROUP BY CAST(date_column AS DATE)
-        """
-
-        # Replace 'date_column' with the actual column name in your table
-        df = query_sql_server(server, database, username, password, query)
-
-        # Create a DataFrame with all dates and fill missing values with 0
-        date_range = generate_date_range(start_date, end_date)
-        df_all_dates = pd.DataFrame({'date': date_range})
-        df = df_all_dates.merge(df, on='date', how='left').fillna(0)
-
-        # Add table name to the results
-        df['table_name'] = table_name
-        results.append(df)
-
-    # Concatenate results from all tables
-    final_df = pd.concat(results, ignore_index=True)
-
-    # Save results to CSV
-    final_df.to_csv('table_counts.csv', index=False)
-
-    # Save results to HTML with CSS styling
-    html_content = final_df.to_html(index=False, classes=['table', 'table-striped', 'table-bordered'])
-    with open('table_counts.html', 'w') as f:
-        f.write(html_content)
-
-if __name__ == '__main__':
-    main()
-
-#Method 3
 
 import pandas as pd
 import pyodbc
@@ -251,45 +149,62 @@ password = 'your_password'
 conn_string = f"DRIVER={{SQL Server}};SERVER={server};DATABASE={database};UID={username};PWD={password}"
 conn = pyodbc.connect(conn_string)
 
-# Read the list of tables from CSV
-tables_df = pd.read_csv('tables.csv')
-table_names = tables_df['TableName'].tolist()  # Assuming the CSV has a column named 'TableName'
+# Read the list of tables and other fields from CSV
+tables_df = pd.read_csv('tables.csv')  # Ensure your CSV has a 'TableName' column and other fields
+table_names = tables_df['TableName'].tolist()
 
 # Define date range
 start_date = datetime(2023, 1, 1)  # Adjust as necessary
 end_date = datetime(2023, 10, 1)    # Adjust as necessary
 date_range = [start_date + timedelta(days=x) for x in range((end_date - start_date).days + 1)]
 
-# Initialize results dictionary
-results = {table: {date.strftime('%Y-%m-%d'): 0 for date in date_range} for table in table_names}
+# Initialize results list
+results = []
 
 # Query each table for row counts per date
-for table in table_names:
+for index, row in tables_df.iterrows():
+    table_name = row['TableName']
+    other_fields = row.drop('TableName').to_dict()  # Get other fields to add later
+
     for date in date_range:
         query = f"""
         SELECT COUNT(*) 
-        FROM {table} 
+        FROM {table_name} 
         WHERE CAST(YourDateColumn AS DATE) = '{date.strftime('%Y-%m-%d')}'
         """
         try:
             cursor = conn.cursor()
             cursor.execute(query)
-            count = cursor.fetchone()[0]
-            results[table][date.strftime('%Y-%m-%d')] = count
+            count = cursor.fetchone()[0] if cursor.fetchone() is not None else 0
         except Exception as e:
-            print(f"Error querying table {table} for date {date}: {e}")
+            print(f"Error querying table {table_name} for date {date}: {e}")
+            count = 0
+        
+        # Append the result to the list
+        result_entry = {'Date': date.strftime('%Y-%m-%d'), 'Count': count}
+        result_entry.update(other_fields)  # Add other fields
+        results.append(result_entry)
 
 # Convert results to DataFrame
-final_df = pd.DataFrame(results).T.fillna(0).astype(int)
+final_df = pd.DataFrame(results)
+
+# Pivot the DataFrame
+pivot_df = final_df.pivot_table(index=[col for col in final_df.columns if col != 'Date' and col != 'Count'],
+                                 columns='Date', 
+                                 values='Count', 
+                                 fill_value=0).reset_index()
+
+# Replace NaN and ')' in a specific string column (change 'YourStringColumn' accordingly)
+pivot_df['YourStringColumn'] = pivot_df['YourStringColumn'].fillna('SpecificString').str.replace(')', 'SpecificString')
 
 # Save to CSV
-final_df.to_csv('row_counts.csv')
+pivot_df.to_csv('row_counts_pivoted.csv', index=False)
 
 # Create an HTML table with CSS styling
-html = final_df.to_html(classes='styled-table')
+html = pivot_df.to_html(classes='styled-table', index=False)
 
 # Save HTML to file
-with open('row_counts.html', 'w') as f:
+with open('row_counts_pivoted.html', 'w') as f:
     f.write('''
     <html>
     <head>
@@ -319,3 +234,4 @@ with open('row_counts.html', 'w') as f:
 
 # Close the database connection
 conn.close()
+
