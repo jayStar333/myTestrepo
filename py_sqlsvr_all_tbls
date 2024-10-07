@@ -26,6 +26,7 @@ for index, row in tables_df.iterrows():
     df['Date'] = pd.to_datetime(df['Date'])
     count_df = date_df.merge(df, on='Date', how='left').fillna(0)
     count_df['Table'] = table_name
+    count_df['Category'] = row.get('Category', '-')  # Add the Category column and replace missing values with '-'
     results.append(count_df)
 
 # Step 4: Include tables with no data
@@ -35,10 +36,23 @@ for index, row in tables_df.iterrows():
         empty_df = date_df.copy()
         empty_df['Count'] = 0
         empty_df['Table'] = table_name
+        empty_df['Category'] = row.get('Category', '-')  # Add the Category column and replace missing values with '-'
         results.append(empty_df)
 
 # Step 5: Combine results
 final_df = pd.concat(results)
 
+# Step 6: Remove duplicate rows
+final_df = final_df.drop_duplicates()
+
+# Step 7: Group by 'Table', 'Date', and 'Category' to ensure unique rows
+final_df = final_df.groupby(['Table', 'Date', 'Category']).sum().reset_index()
+
+# Step 8: Filter out rows with all zeros
+final_df = final_df[final_df['Count'] != 0]
+
+# Step 9: Pivot the table to make dates as columns
+pivot_df = final_df.pivot_table(index=['Table', 'Category'], columns='Date', values='Count', fill_value=0)
+
 # Display the result
-print(final_df)
+print(pivot_df)
