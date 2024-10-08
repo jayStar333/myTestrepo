@@ -1,0 +1,73 @@
+import pandas as pd
+
+# Sample DataFrame
+data = {
+    'Name': ['Alice', 'Bob', 'Charlie'],
+    'Age': [24, 27, 22],
+    'Score': [85, 90, 88]
+}
+df = pd.DataFrame(data)
+
+# Create a Styler object for CSS styling
+styler = df.style.set_table_styles(
+    [
+        {'selector': 'thead th', 'props': [('background-color', '#009879'), ('color', '#ffffff'), ('text-align', 'left')]},
+        {'selector': 'tbody tr:nth-of-type(even)', 'props': [('background-color', '#f3f3f3')]},
+        {'selector': 'tbody tr:last-of-type', 'props': [('border-bottom', '2px solid #009879')]},
+        {'selector': 'tbody tr', 'props': [('border-bottom', '1px solid #dddddd')]},
+        {'selector': 'th, td', 'props': [('padding', '12px 15px')]}
+    ]
+).set_caption("Your Organization Name")
+
+# Render the styled DataFrame to HTML
+html_output = styler.render()
+
+# Add CSS styling with a banner at the top
+css = """
+<style>
+body {
+    font-family: sans-serif;
+}
+.banner {
+    text-align: center;
+    font-size: 2em;
+    margin-top: 20px;
+}
+.thin-bar {
+    height: 5px;
+    background-color: #009879;
+    margin-bottom: 20px;
+}
+</style>
+"""
+
+# Combine CSS and HTML with a banner and JavaScript for copying
+html_output = f"""
+<html>
+<head>{css}</head>
+<body>
+<div class="banner">Your Organization Name</div>
+<div class="thin-bar"></div>
+{html_output}
+<button onclick="copyToClipboard()">Copy Content</button>
+<script>
+    function copyToClipboard() {
+        var content = document.querySelector('.dataframe');
+        var range = document.createRange();
+        range.selectNode(content);
+        window.getSelection().removeAllRanges();
+        window.getSelection().addRange(range);
+        document.execCommand('copy');
+        window.getSelection().removeAllRanges();
+        alert('Content copied to clipboard!');
+    }
+</script>
+</body>
+</html>
+"""
+
+# Save the HTML output to a file
+with open('output.html', 'w') as file:
+    file.write(html_output)
+
+print("CSV file and HTML table with CSS styling have been generated and saved as 'final_results.csv' and 'output.html'.")
