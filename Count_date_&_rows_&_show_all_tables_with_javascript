@@ -51,7 +51,7 @@ html_output = f"""
 {html_output}
 <button onclick="copyToClipboard()">Copy Content</button>
 <script>
-    function copyToClipboard() {
+    function copyToClipboard() {{
         var content = document.querySelector('.dataframe');
         var range = document.createRange();
         range.selectNode(content);
@@ -60,7 +60,7 @@ html_output = f"""
         document.execCommand('copy');
         window.getSelection().removeAllRanges();
         alert('Content copied to clipboard!');
-    }
+    }}
 </script>
 </body>
 </html>
