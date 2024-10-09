@@ -90,6 +90,15 @@ html_output = f"""
             window.getSelection().removeAllRanges();
             alert('Content copied to clipboard!');
         }}
+
+    // Function to make header sticky
+    function makeHeaderSticky() {{
+        var table = document.querySelector('.dataframe');
+        var thead = table.querySelector('thead');
+        thead.classList.add('sticky-header');
+    }}
+    // Call the function to make header sticky
+    makeHeaderSticky();
     </script>
 </body>
 </html>
