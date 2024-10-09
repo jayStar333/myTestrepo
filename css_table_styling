@@ -1,0 +1,124 @@
+import pandas as pd
+
+# Sample DataFrame
+data = {
+    'Name': ['Alice', 'Bob', 'Charlie'],
+    'Age': [24, 27, 22],
+    'Score': [85, 90, 88]
+}
+df = pd.DataFrame(data)
+
+# Create a Styler object for CSS styling
+styler = df.style.set_table_styles(
+    [
+        {'selector': 'thead th', 'props': [('background-color', '#009879'), ('color', '#ffffff'), ('text-align', 'left')]},
+        {'selector': 'tbody tr:nth-of-type(even)', 'props': [('background-color', '#f3f3f3')]},
+        {'selector': 'tbody tr:last-of-type', 'props': [('border-bottom', '2px solid #009879')]},
+        {'selector': 'tbody tr', 'props': [('border-bottom', '1px solid #dddddd')]},
+        {'selector': 'th, td', 'props': [('padding', '12px 15px')]}
+    ]
+).set_caption("Your Organization Name")
+
+# Render the styled DataFrame to HTML
+html_output = styler.render()
+
+# Add CSS styling with a banner at the top
+css = """
+<style>
+body {
+    font-family: sans-serif;
+}
+.banner {
+    text-align: center;
+    font-size: 2em;
+    margin-top: 20px;
+}
+.thin-bar {
+    height: 5px;
+    background-color: #009879;
+    margin-bottom: 20px;
+}
+.dataframe-container {
+    overflow: auto;
+    max-height: 400px; /* Adjust as needed */
+}
+.dataframe-container::-webkit-scrollbar {
+    width: 10px;
+}
+.dataframe-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+.dataframe-container::-webkit-scrollbar-thumb {
+    background: #888;
+}
+.dataframe-container::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+.sticky-header {
+    position: -webkit-sticky; /* For Safari */
+    position: sticky;
+    top: 0;
+    background-color: #009879;
+    color: #ffffff;
+    z-index: 1000; /* Ensure it stays on top */
+}
+</style>
+"""
+
+# Combine CSS and HTML with a banner and JavaScript for copying
+html_output = f"""
+<html>
+<head>{css}</head>
+<body>
+<div class="banner">Your Organization Name</div>
+<div class="thin-bar"></div>
+<div class="dataframe-container">
+    <table class="dataframe">
+        <thead class="sticky-header">
+            <tr>
+                <th>Name</th>
+                <th>Age</th>
+                <th>Score</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Alice</td>
+                <td>24</td>
+                <td>85</td>
+            </tr>
+            <tr>
+                <td>Bob</td>
+                <td>27</td>
+                <td>90</td>
+            </tr>
+            <tr>
+                <td>Charlie</td>
+                <td>22</td>
+                <td>88</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+<button onclick="copyToClipboard()">Copy Content</button>
+<script>
+    function copyToClipboard() {
+        var content = document.querySelector('.dataframe-container');
+        var range = document.createRange();
+        range.selectNode(content);
+        window.getSelection().removeAllRanges();
+        window.getSelection().addRange(range);
+        document.execCommand('copy');
+        window.getSelection().removeAllRanges();
+        alert('Content copied to clipboard!');
+    }
+</script>
+</body>
+</html>
+"""
+
+# Save the HTML output to a file
+with open('output.html', 'w') as file:
+    file.write(html_output)
+
+print("CSV file and HTML table with CSS styling have been generated and saved as 'final_results.csv' and 'output.html'.")
