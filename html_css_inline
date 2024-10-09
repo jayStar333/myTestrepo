@@ -16,7 +16,7 @@ table_html = """
 """
 # Add table headers with inline styles
 for column in df.columns:
-    table_html += f'<th style="padding: 12px 15px; background-color: #009879; color: #ffffff; text-align: left;">{column}</th>'
+    table_html += f'<th style="padding: 12px 15px; background-color: #009879; color: #ffffff; text-align: left; position: sticky; top: 0; z-index: 2;">{column}</th>'
 table_html += """
         </tr>
     </thead>
