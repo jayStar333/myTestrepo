@@ -1,0 +1,102 @@
+import pandas as pd
+
+# Sample DataFrame
+data = {
+    'Name': ['Alice', 'Bob', 'Charlie'],
+    'Age': [24, 27, 22],
+    'Score': [85, 90, 88]
+}
+df = pd.DataFrame(data)
+
+# Generate the HTML table dynamically with inline styles
+table_html = """
+<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="border-collapse: collapse; width: 100%;">
+    <thead>
+        <tr>
+"""
+# Add table headers with inline styles
+for column in df.columns:
+    table_html += f'<th style="padding: 12px 15px; background-color: #009879; color: #ffffff; text-align: left;">{column}</th>'
+table_html += """
+        </tr>
+    </thead>
+    <tbody>
+"""
+# Add table rows with inline styles
+for i, row in df.iterrows():
+    row_style = 'background-color: #f3f3f3;' if i % 2 == 0 else ''
+    table_html += f'<tr style="{row_style}">'
+    for value in row:
+        table_html += f'<td style="padding: 12px 15px; border-bottom: 1px solid #dddddd;">{value}</td>'
+    table_html += '</tr>'
+table_html += """
+    </tbody>
+</table>
+"""
+
+# Combine CSS and HTML with a banner and JavaScript for copying
+html_output = f"""
+<html>
+<head>
+    <style>
+        body {{
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }}
+        .banner {{
+            text-align: center;
+            font-size: 2em;
+            margin-top: 20px;
+        }}
+        .thin-bar {{
+            height: 5px;
+            background-color: #009879;
+            margin-bottom: 20px;
+        }}
+        .dataframe-container {{
+            overflow: auto;
+            max-height: 400px; /* Adjust as needed */
+        }}
+        .dataframe-container::-webkit-scrollbar {{
+            width: 10px;
+        }}
+        .dataframe-container::-webkit-scrollbar-track {{
+            background: #f1f1f1;
+        }}
+        .dataframe-container::-webkit-scrollbar-thumb {{
+            background: #888;
+        }}
+        .dataframe-container::-webkit-scrollbar-thumb:hover {{
+            background: #555;
+        }}
+    </style>
+</head>
+<body>
+    <div class="banner">Your Organization Name</div>
+    <div class="thin-bar"></div>
+    <div class="dataframe-container">
+        {table_html}
+    </div>
+    <button onclick="copyToClipboard()">Copy Content</button>
+    <script>
+        function copyToClipboard() {{
+            var content = document.querySelector('.dataframe-container');
+            var range = document.createRange();
+            range.selectNode(content);
+            window.getSelection().removeAllRanges();
+            window.getSelection().addRange(range);
+            document.execCommand('copy');
+            window.getSelection().removeAllRanges();
+            alert('Content copied to clipboard!');
+        }}
+    </script>
+</body>
+</html>
+"""
+
+# Save the HTML output to a file
+with open('output.html', 'w') as file:
+    file.write(html_output)
+
+print("CSV file and HTML table with CSS styling have been generated and saved as 'final_results.csv' and 'output.html'.")
