@@ -1,0 +1,25 @@
+-- Replace 'your_database' with the actual database name
+USE your_database;
+
+-- Create a temporary table to store the results
+CREATE TEMPORARY TABLE temp_last_updated AS
+SELECT
+  'table1' AS table_name,
+  from_unixtime(cast(tblproperties['transient_lastDdlTime'] AS BIGINT)) AS last_updated_timestamp
+FROM
+  (SELECT * FROM table1 LIMIT 1) t
+UNION ALL
+SELECT
+  'table2' AS table_name,
+  from_unixtime(cast(tblproperties['transient_lastDdlTime'] AS BIGINT)) AS last_updated_timestamp
+FROM
+  (SELECT * FROM table2 LIMIT 1) t
+UNION ALL
+SELECT
+  'table3' AS table_name,
+  from_unixtime(cast(tblproperties['transient_lastDdlTime'] AS BIGINT)) AS last_updated_timestamp
+FROM
+  (SELECT * FROM table3 LIMIT 1) t;
+
+-- Query the temporary table to see the results
+SELECT * FROM temp_last_updated;
