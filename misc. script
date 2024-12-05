@@ -1,10 +1,45 @@
-SELECT session_id, protocol_type, driver_version = 
-    CASE SUBSTRING(CAST(protocol_version AS BINARY(4)), 1, 1)
-        WHEN 0x70 THEN 'SQL Server 7.0'
-        WHEN 0x71 THEN 'SQL Server 2000'
-        WHEN 0x72 THEN 'SQL Server 2005'
-        WHEN 0x73 THEN 'SQL Server 2008'
-        ELSE 'Unknown driver'
-    END,
-    client_net_address, client_tcp_port, local_tcp_port
-FROM sys.dm_exec_connections;
+import pandas as pd
+
+# Sample DataFrame
+data = {
+    'Column1': range(1, 21),
+    'Column2': range(21, 41),
+    'Column3': range(41, 61)
+}
+df = pd.DataFrame(data)
+
+# Apply styling
+styled_df = df.style.set_table_styles(
+    [{'selector': 'thead th', 'props': [('position', 'sticky'), ('top', '0'), ('background-color', '#f2f2f2')]}]
+).set_properties(**{'max-height': '400px', 'overflow': 'auto'})
+
+styled_df.to_excel('styled_dashboard.xlsx', engine='openpyxl', index=False)
+
+import win32com.client as win32
+
+# Create an Outlook application instance
+outlook = win32.Dispatch('outlook.application')
+
+# Create a new email
+mail = outlook.CreateItem(0)
+mail.Subject = 'Scrollable Excel Dashboard'
+mail.To = 'recipient@example.com'
+mail.BodyFormat = 2  # HTML format
+
+# Embed the Excel file
+attachment = 'styled_dashboard.xlsx'
+mail.Attachments.Add(attachment)
+
+# Create the HTML body with the embedded Excel file
+mail.HTMLBody = f"""
+<html>
+<body>
+    <h2>Scrollable Excel Dashboard</h2>
+    <p>Please find the attached Excel dashboard.</p>
+    <p><img src="cid:{attachment}" width="600" height="400"></p>
+</body>
+</html>
+"""
+
+# Send the email
+mail.Send()
