@@ -98,3 +98,66 @@ for col in ws.columns:
 
 # Save the workbook
 wb.save('styled_dashboard.xlsx')
+
+#3rd vers.-------
+import pandas as pd
+from openpyxl import Workbook
+from openpyxl.utils.dataframe import dataframe_to_rows
+from openpyxl.styles import Font, PatternFill, Border, Side, NamedStyle
+
+# Sample DataFrame
+data = {
+    'Name': ['Alice', 'Bob', 'Charlie'],
+    'Score': [85, 90, 95]
+}
+df = pd.DataFrame(data)
+
+# Create a workbook and select the active worksheet
+wb = Workbook()
+ws = wb.active
+ws.title = 'Dashboard'
+
+# Add a title
+ws['A1'] = 'Student Scores'
+ws['A1'].font = Font(size=14, bold=True)
+
+# Append the DataFrame to the worksheet
+for r in dataframe_to_rows(df, index=False, header=True):
+    ws.append(r)
+
+# Define styles
+header_font = Font(bold=True, color="FFFFFF")
+header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+cell_fill = PatternFill(start_color="DDEBF7", end_color="DDEBF7", fill_type="solid")
+border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
+
+# Apply styles to header
+for cell in ws[2]:
+    cell.font = header_font
+    cell.fill = header_fill
+    cell.border = border
+
+# Apply styles to data cells and set number format
+for row in ws.iter_rows(min_row=3, max_row=ws.max_row, min_col=1, max_col=ws.max_column):
+    for cell in row:
+        cell.fill = cell_fill
+        cell.border = border
+        if isinstance(cell.value, (int, float)):
+            cell.number_format = '0'  # Set number format to integer
+
+# Adjust column widths
+for col in ws.columns:
+    max_length = 0
+    column = col[0].column_letter  # Get the column name
+    for cell in col:
+        try:
+            if len(str(cell.value)) > max_length:
+                max_length = len(cell.value)
+        except:
+            pass
+    adjusted_width = (max_length + 2)
+    ws.column_dimensions[column].width = adjusted_width
+
+# Save the workbook
+wb.save('styled_dashboard.xlsx')
+
