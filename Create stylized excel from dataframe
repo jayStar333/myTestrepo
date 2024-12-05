@@ -1,0 +1,40 @@
+import pandas as pd
+from openpyxl import Workbook
+from openpyxl.utils.dataframe import dataframe_to_rows
+from openpyxl.styles import Font
+
+# Sample DataFrame
+data = {
+    'Name': ['Alice', 'Bob', 'Charlie'],
+    'Score': [85, 90, 95]
+}
+df = pd.DataFrame(data)
+
+# Create a workbook and select the active worksheet
+wb = Workbook()
+ws = wb.active
+ws.title = 'Dashboard'
+
+# Add a title
+ws['A1'] = 'Student Scores'
+ws['A1'].font = Font(size=14, bold=True)
+
+# Append the DataFrame to the worksheet
+for r in dataframe_to_rows(df, index=False, header=True):
+    ws.append(r)
+
+# Adjust column widths
+for col in ws.columns:
+    max_length = 0
+    column = col[0].column_letter  # Get the column name
+    for cell in col:
+        try:
+            if len(str(cell.value)) > max_length:
+                max_length = len(cell.value)
+        except:
+            pass
+    adjusted_width = (max_length + 2)
+    ws.column_dimensions[column].width = adjusted_width
+
+# Save the workbook
+wb.save('styled_dashboard.xlsx')
