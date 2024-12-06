@@ -1,0 +1,15 @@
+pip install pandas openpyxl
+
+import pandas as pd
+
+# Load the Excel file
+df = pd.read_excel('your_file.xlsx', sheet_name=None)
+
+# Replace the value in all sheets
+for sheet_name, sheet_data in df.items():
+    df[sheet_name] = sheet_data.replace('old_value', 'new_value')
+
+# Save the modified Excel file
+with pd.ExcelWriter('modified_file.xlsx', engine='openpyxl') as writer:
+    for sheet_name, sheet_data in df.items():
+        sheet_data.to_excel(writer, sheet_name=sheet_name, index=False)
