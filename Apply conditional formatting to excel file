@@ -1,0 +1,25 @@
+import openpyxl
+from openpyxl.styles import PatternFill
+
+# Load the workbook and select the sheet
+wb = openpyxl.load_workbook(excel_path)
+ws = wb['Sheet1']
+
+# Define the fill for conditional formatting
+fill = PatternFill(start_color='FFFF00', end_color='FFFF00', fill_type='solid')
+
+# Get the column names dynamically
+columns = ws[1]
+table_a_columns = [col for col in columns if col.value.startswith('TableA')]
+table_b_columns = [col for col in columns if col.value.startswith('TableB')]
+
+# Apply conditional formatting
+for col_a, col_b in zip(table_a_columns, table_b_columns):
+    for row in ws.iter_rows(min_row=2, max_row=ws.max_row):
+        cell_a = row[col_a.column - 1]
+        cell_b = row[col_b.column - 1]
+        if cell_a.value != cell_b.value and cell_b.value != 0:
+            cell_b.fill = fill
+
+# Save the styled workbook
+wb.save('styled_dynamic_dates.xlsx')
