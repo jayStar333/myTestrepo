@@ -1,0 +1,27 @@
+import openpyxl
+from openpyxl.styles import Font, PatternFill
+from tablepyxl import tablepyxl
+
+# Read the HTML file
+with open('your_file.html', 'r') as file:
+    html_content = file.read()
+
+# Convert HTML to Excel
+tablepyxl.document_to_xl(html_content, 'output_file.xlsx')
+
+
+
+# Load the workbook
+wb = openpyxl.load_workbook('output_file.xlsx')
+ws = wb.active
+
+# Apply additional styles (example)
+header_font = Font(bold=True, color='FFFFFF')
+header_fill = PatternFill(start_color='4F81BD', end_color='4F81BD', fill_type='solid')
+
+for cell in ws[1]:
+    cell.font = header_font
+    cell.fill = header_fill
+
+# Save the styled workbook
+wb.save('styled_output_file.xlsx')
