@@ -40,3 +40,8 @@ def apply_conditional_formatting(df, writer, sheet_name):
                     if cell_a.value != cell_b.value:
                         cell_a.fill = fill
                         cell_b.fill = fill
+#Export to excel
+# Create a Pandas Excel writer using openpyxl as the engine
+with pd.ExcelWriter('output.xlsx', engine='openpyxl') as writer:
+    df.to_excel(writer, sheet_name='Sheet1', index=False)
+    apply_conditional_formatting(df, writer, 'Sheet1')
