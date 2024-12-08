@@ -1,0 +1,20 @@
+import openpyxl
+from openpyxl.styles import PatternFill
+
+def apply_conditional_formatting(df, writer, sheet_name):
+    workbook = writer.book
+    worksheet = writer.sheets[sheet_name]
+    
+    fill = PatternFill(start_color='FFEE1111', end_color='FFEE1111', fill_type='solid')
+    
+    for col in df.columns:
+        if col.startswith('tablea_'):
+            date_suffix = col.split('_')[1]
+            tableb_col = f'tableb_{date_suffix}'
+            if tableb_col in df.columns:
+                for row in range(2, len(df) + 2):
+                    cell_a = worksheet[f'{openpyxl.utils.get_column_letter(df.columns.get_loc(col) + 1)}{row}']
+                    cell_b = worksheet[f'{openpyxl.utils.get_column_letter(df.columns.get_loc(tableb_col) + 1)}{row}']
+                    if cell_a.value != cell_b.value:
+                        cell_a.fill = fill
+                        cell_b.fill = fill
