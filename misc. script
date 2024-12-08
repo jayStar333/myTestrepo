@@ -1,45 +1,24 @@
-import pandas as pd
+import openpyxl
+from openpyxl.styles import PatternFill
 
-# Sample DataFrame
-data = {
-    'Column1': range(1, 21),
-    'Column2': range(21, 41),
-    'Column3': range(41, 61)
-}
-df = pd.DataFrame(data)
+def highlight_date_differences(df, writer, sheet_name):
+    workbook = writer.book
+    worksheet = writer.sheets[sheet_name]
+    
+    fill = PatternFill(start_color='FFEE1111', end_color='FFEE1111', fill_type='solid')
+    
+    # Iterate over the columns to find pairs of similarly named columns
+    for col in df.columns:
+        if col in df.columns:
+            for row in range(2, len(df) + 2):
+                cell_a = worksheet[f'{openpyxl.utils.get_column_letter(df.columns.get_loc(col) + 1)}{row}']
+                cell_b = worksheet[f'{openpyxl.utils.get_column_letter(df.columns.get_loc(col) + 2)}{row}']
+                if cell_a.value != cell_b.value:
+                    cell_a.fill = fill
+                    cell_b.fill = fill
 
-# Apply styling
-styled_df = df.style.set_table_styles(
-    [{'selector': 'thead th', 'props': [('position', 'sticky'), ('top', '0'), ('background-color', '#f2f2f2')]}]
-).set_properties(**{'max-height': '400px', 'overflow': 'auto'})
+# Create a Pandas Excel writer using openpyxl as the engine
+with pd.ExcelWriter('highlighted_dashboard.xlsx', engine='openpyxl') as writer:
+    df.to_excel(writer, sheet_name='Sheet1', index=False)
+    highlight_date_differences(df, writer, 'Sheet1')
 
-styled_df.to_excel('styled_dashboard.xlsx', engine='openpyxl', index=False)
-
-import win32com.client as win32
-
-# Create an Outlook application instance
-outlook = win32.Dispatch('outlook.application')
-
-# Create a new email
-mail = outlook.CreateItem(0)
-mail.Subject = 'Scrollable Excel Dashboard'
-mail.To = 'recipient@example.com'
-mail.BodyFormat = 2  # HTML format
-
-# Embed the Excel file
-attachment = 'styled_dashboard.xlsx'
-mail.Attachments.Add(attachment)
-
-# Create the HTML body with the embedded Excel file
-mail.HTMLBody = f"""
-<html>
-<body>
-    <h2>Scrollable Excel Dashboard</h2>
-    <p>Please find the attached Excel dashboard.</p>
-    <p><img src="cid:{attachment}" width="600" height="400"></p>
-</body>
-</html>
-"""
-
-# Send the email
-mail.Send()
