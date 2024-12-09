@@ -148,25 +148,54 @@ data = {
 }
 df = pd.DataFrame(data)
 
+# Define a function to apply conditional formatting
 def highlight_mismatch(val, col1, col2):
-    if val[col1] != val[col2]:
-        return ['background-color: red'] * len(val)
-    else:
-        return [''] * len(val)
-
-# List of column pairs to compare
-column_pairs = [('A', 'J'), ('B', 'K')]
+    return ['background-color: red' if val[col1] != val[col2] else '' for _ in val]
 
 # Apply the conditional formatting
-for col1, col2 in column_pairs:
-    df.style.apply(lambda x: highlight_mismatch(x, col1, col2), axis=1)
+styled_df = df.style.apply(lambda x: highlight_mismatch(x, 'A', 'J'), axis=1)
+styled_df = styled_df.apply(lambda x: highlight_mismatch(x, 'B', 'K'), axis=1)
 
-# Create a Pandas Excel writer using XlsxWriter as the engine.
-writer = pd.ExcelWriter('styled_dashboard.xlsx', engine='xlsxwriter')
+# Save the styled DataFrame to an Excel file
+styled_df.to_excel('styled_dashboard.xlsx', engine='openpyxl', index=False)
 
-# Convert the dataframe to an XlsxWriter Excel object.
-df.style.apply(lambda x: highlight_mismatch(x, 'A', 'J'), axis=1).to_excel(writer, sheet_name='Sheet1', index=False)
+from openpyxl import load_workbook
+from openpyxl.styles import PatternFill, Font, Alignment
 
-# Save the Excel file.
-writer.save()
+# Load the workbook and select the active sheet
+wb = load_workbook('styled_dashboard.xlsx')
+ws = wb.active
+
+# Define styles
+red_fill = PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid")
+header_font = Font(bold=True, color="FFFFFF")
+header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+alignment = Alignment(horizontal="center", vertical="center")
+
+# Apply styles to header
+for cell in ws[1]:
+    cell.font = header_font
+    cell.fill = header_fill
+    cell.alignment = alignment
+
+# Set column widths and row heights
+column_widths = {'A': 15, 'B': 15, 'J': 15, 'K': 15}
+for col, width in column_widths.items():
+    ws.column_dimensions[col].width = width
+
+for row in range(2, ws.max_row + 1):
+    ws.row_dimensions[row].height = 20
+
+# Apply conditional formatting for mismatches
+for row in range(2, ws.max_row + 1):
+    if ws[f'A{row}'].value != ws[f'J{row}'].value:
+        ws[f'A{row}'].fill = red_fill
+        ws[f'J{row}'].fill = red_fill
+    if ws[f'B{row}'].value != ws[f'K{row}'].value:
+        ws[f'B{row}'].fill = red_fill
+        ws[f'K{row}'].fill = red_fill
+
+# Save the enhanced Excel file
+wb.save('styled_dashboard_final.xlsx')
+
 
