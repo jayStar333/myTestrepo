@@ -136,3 +136,37 @@ styled_df = df_styled.style.applymap(lambda val, row, col: apply_styles(val, cel
                                      col=df_styled.columns)
 
 styled_df.to_excel('styled_dashboard_final.xlsx', engine='openpyxl', index=False)
+
+#YET ANOTHER METHOD
+import pandas as pd
+
+data = {
+    'A': [1, 2, 3, 4],
+    'B': [5, 6, 7, 8],
+    'J': [1, 3, 2, 4],
+    'K': [5, 6, 7, 9]
+}
+df = pd.DataFrame(data)
+
+def highlight_mismatch(val, col1, col2):
+    if val[col1] != val[col2]:
+        return ['background-color: red'] * len(val)
+    else:
+        return [''] * len(val)
+
+# List of column pairs to compare
+column_pairs = [('A', 'J'), ('B', 'K')]
+
+# Apply the conditional formatting
+for col1, col2 in column_pairs:
+    df.style.apply(lambda x: highlight_mismatch(x, col1, col2), axis=1)
+
+# Create a Pandas Excel writer using XlsxWriter as the engine.
+writer = pd.ExcelWriter('styled_dashboard.xlsx', engine='xlsxwriter')
+
+# Convert the dataframe to an XlsxWriter Excel object.
+df.style.apply(lambda x: highlight_mismatch(x, 'A', 'J'), axis=1).to_excel(writer, sheet_name='Sheet1', index=False)
+
+# Save the Excel file.
+writer.save()
+
