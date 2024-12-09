@@ -137,24 +137,32 @@ styled_df = df_styled.style.applymap(lambda val, row, col: apply_styles(val, cel
 
 styled_df.to_excel('styled_dashboard_final.xlsx', engine='openpyxl', index=False)
 
-#YET ANOTHER METHOD
+#YET ANOTHER METHOD ----------------
 import pandas as pd
 
 data = {
-    'A': [1, 2, 3, 4],
-    'B': [5, 6, 7, 8],
-    'J': [1, 3, 2, 4],
-    'K': [5, 6, 7, 9]
+    '2023-01-01': [1, 2, 3, 4],
+    '2023-01-02': [5, 6, 7, 8],
+    '2023-01-01_dup': [1, 3, 2, 4],
+    '2023-01-02_dup': [5, 6, 7, 9]
 }
 df = pd.DataFrame(data)
 
-# Define a function to apply conditional formatting
+import re
+
+# Function to highlight mismatches
 def highlight_mismatch(val, col1, col2):
-    return ['background-color: red' if val[col1] != val[col2] else '' for _ in val]
+    return ['background-color: red' if val[col1] != val[col2] else 'background-color: lightgreen' for _ in val]
+
+# Extract date columns and their duplicates
+date_pattern = re.compile(r'(\d{4}-\d{2}-\d{2})')
+date_columns = [col for col in df.columns if date_pattern.match(col)]
+date_pairs = [(col, f'{col}_dup') for col in date_columns if f'{col}_dup' in df.columns]
 
 # Apply the conditional formatting
-styled_df = df.style.apply(lambda x: highlight_mismatch(x, 'A', 'J'), axis=1)
-styled_df = styled_df.apply(lambda x: highlight_mismatch(x, 'B', 'K'), axis=1)
+styled_df = df.style
+for col1, col2 in date_pairs:
+    styled_df = styled_df.apply(lambda x: highlight_mismatch(x, col1, col2), axis=1)
 
 # Save the styled DataFrame to an Excel file
 styled_df.to_excel('styled_dashboard.xlsx', engine='openpyxl', index=False)
@@ -168,6 +176,7 @@ ws = wb.active
 
 # Define styles
 red_fill = PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid")
+green_fill = PatternFill(start_color="90EE90", end_color="90EE90", fill_type="solid")
 header_font = Font(bold=True, color="FFFFFF")
 header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
 alignment = Alignment(horizontal="center", vertical="center")
@@ -179,7 +188,7 @@ for cell in ws[1]:
     cell.alignment = alignment
 
 # Set column widths and row heights
-column_widths = {'A': 15, 'B': 15, 'J': 15, 'K': 15}
+column_widths = {col: 15 for col in df.columns}
 for col, width in column_widths.items():
     ws.column_dimensions[col].width = width
 
@@ -187,15 +196,20 @@ for row in range(2, ws.max_row + 1):
     ws.row_dimensions[row].height = 20
 
 # Apply conditional formatting for mismatches
-for row in range(2, ws.max_row + 1):
-    if ws[f'A{row}'].value != ws[f'J{row}'].value:
-        ws[f'A{row}'].fill = red_fill
-        ws[f'J{row}'].fill = red_fill
-    if ws[f'B{row}'].value != ws[f'K{row}'].value:
-        ws[f'B{row}'].fill = red_fill
-        ws[f'K{row}'].fill = red_fill
+for col1, col2 in date_pairs:
+    for row in range(2, ws.max_row + 1):
+        if ws[f'{col1}{row}'].value != ws[f'{col2}{row}'].value:
+            ws[f'{col1}{row}'].fill = red_fill
+            ws[f'{col2}{row}'].fill = red_fill
+        else:
+            ws[f'{col1}{row}'].fill = green_fill
+            ws[f'{col2}{row}'].fill = green_fill
 
 # Save the enhanced Excel file
 wb.save('styled_dashboard_final.xlsx')
+
+
+
+
 
 
