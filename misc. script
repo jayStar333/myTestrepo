@@ -1,4 +1,4 @@
-import openpyxl
+by import openpyxl
 from openpyxl.styles import PatternFill
 
 def highlight_date_differences(df, writer, sheet_name):
@@ -53,4 +53,9 @@ def highlight_numeric_differences(df, writer, sheet_name):
                 if cell_a.value != cell_b.value:
                     cell_a.fill = fill
                     cell_b.fill = fill
+
+# Create a Pandas Excel writer using openpyxl as the engine
+with pd.ExcelWriter('highlighted_dashboard.xlsx', engine='openpyxl') as writer:
+    df.to_excel(writer, sheet_name='Sheet1', index=False)
+    highlight_numeric_differences(df, writer, 'Sheet1')
 
