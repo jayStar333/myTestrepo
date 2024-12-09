@@ -1,0 +1,70 @@
+import pandas as pd
+
+df = pd.read_excel('your_excel_file.xlsx')
+
+#identify date headers
+import re
+
+date_pattern = re.compile(r'\d{4}-\d{2}-\d{2}')  # Adjust the pattern as needed
+date_columns = [col for col in df.columns if date_pattern.match(col)]
+
+#convert data to float
+for col in date_columns:
+    df[col] = pd.to_numeric(df[col], errors='coerce')
+
+#Compare and match
+comparison_results = pd.DataFrame(index=df.index)
+
+for i in range(0, len(date_columns), 2):
+    col1 = date_columns[i]
+    col2 = date_columns[i + 1] if i + 1 < len(date_columns) else None
+    if col2:
+        comparison_results[f'{col1}_vs_{col2}'] = df[col1] != df[col2]
+
+#Format and save
+from openpyxl import load_workbook
+from openpyxl.styles import PatternFill
+
+wb = load_workbook('your_excel_file.xlsx')
+ws = wb.active
+
+fill = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
+
+for col in comparison_results.columns:
+    for idx, mismatch in enumerate(comparison_results[col]):
+        if mismatch:
+            cell = ws[f'{col.split("_vs_")[0]}{idx + 2}']  # Adjust for header row
+            cell.fill = fill
+
+wb.save('your_excel_file_with_formatting.xlsx')
+
+#Read and extact styles
+import pandas as pd
+from openpyxl import load_workbook
+
+# Load the workbook and select the active sheet
+wb = load_workbook('your_excel_file.xlsx')
+ws = wb.active
+
+# Read the Excel file into a DataFrame
+df = pd.read_excel('your_excel_file.xlsx')
+
+# Extract cell styles
+cell_styles = {}
+for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=1, max_col=ws.max_column):
+    for cell in row:
+        cell_styles[(cell.row, cell.column)] = cell.fill.fgColor.rgb
+
+#Apply extracted styles to dataframe
+def apply_styles(val, cell_styles, row, col):
+    cell_key = (row + 2, col + 1)  # Adjust for header row and zero-based index
+    color = cell_styles.get(cell_key, 'FFFFFF')  # Default to white if no style found
+    return f'background-color: #{color[:6]}'  # Remove alpha channel if present
+
+styled_df = df.style.applymap(lambda val, row, col: apply_styles(val, cell_styles, row, col), 
+                              cell_styles=cell_styles, 
+                              row=df.index, 
+                              col=df.columns)
+
+#Save back to excel
+styled_df.to_excel('styled_excel_file.xlsx', engine='openpyxl', index=False)
