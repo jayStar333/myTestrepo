@@ -54,3 +54,45 @@ macro()
 wb.save()
 wb.close()
 
+2nd option:
+Sub CompareMultipleRanges()
+    Dim ws As Worksheet
+    Set ws = ThisWorkbook.Sheets("Sheet1") ' Change to your sheet name
+    
+    Dim sourceRange As Range
+    Dim targetRange As Range
+    Dim cell As Range
+    Dim targetCell As Range
+    
+    ' Define pairs of ranges to compare
+    Dim pairs As Variant
+    pairs = Array(Array("A1:A10", "C1:C10"), Array("B1:B10", "D1:D10")) ' Add more pairs as needed
+    
+    Dim i As Integer
+    For i = LBound(pairs) To UBound(pairs)
+        Set sourceRange = ws.Range(pairs(i)(0))
+        Set targetRange = ws.Range(pairs(i)(1))
+        
+        ' Ensure ranges are of the same size
+        If sourceRange.Cells.Count = targetRange.Cells.Count Then
+            For Each cell In sourceRange
+                Set targetCell = targetRange.Cells(cell.Row - sourceRange.Row + 1, cell.Column - sourceRange.Column + 1)
+                
+                ' Skip coloring if either cell is blank
+                If cell.Value <> "" And targetCell.Value <> "" Then
+                    If cell.Value = targetCell.Value Then
+                        cell.Interior.Color = RGB(0, 255, 0) ' Green
+                    Else
+                        cell.Interior.Color = RGB(255, 0, 0) ' Red
+                    End If
+                Else
+                    cell.Interior.ColorIndex = xlNone ' No color change
+                End If
+            Next cell
+        Else
+            MsgBox "Source and target ranges must be of the same size."
+        End If
+    Next i
+End Sub
+
+
