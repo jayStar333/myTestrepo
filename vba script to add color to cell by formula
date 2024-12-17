@@ -37,3 +37,20 @@ Sub CompareMultipleRanges()
         End If
     Next i
 End Sub
+
+##To use Python to apply vba script, add vba module to excel file and save as .xlsm and run the fff:
+pip install xlwings
+
+import xlwings as xw
+
+# Open the workbook
+wb = xw.Book('path_to_your_workbook.xlsx')  # Change to your workbook path
+
+# Run the VBA macro
+macro = wb.macro('CompareMultipleRanges')  # Change to your macro name
+macro()
+
+# Save and close the workbook
+wb.save()
+wb.close()
+
