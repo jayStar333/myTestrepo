@@ -1,8 +1,14 @@
 import pandas as pd
 
-# Load the Excel file, skipping the first row
+# Load the Excel files
 file_path = 'path_to_your_excel_file.xlsx'
+key_file_path = 'path_to_your_key_file.xlsx'
+
+# Load the main data file, skipping the first row
 df = pd.read_excel(file_path, skiprows=1)
+
+# Load the key file
+key_df = pd.read_excel(key_file_path)
 
 # Assuming the structure of the DataFrame is known, let's split it into two DataFrames
 # Adjust the column indices based on your actual data structure
@@ -16,11 +22,18 @@ df_source1 = pd.concat([tables_source1, counts_source1], axis=1)
 df_source2 = pd.concat([tables_source2, counts_source2], axis=1)
 
 # Rename columns for clarity
-df_source1.columns = ['Table'] + [f'Date_{i+1}' for i in range(5)]
-df_source2.columns = ['Table'] + [f'Date_{i+1}' for i in range(df_source2.shape[1] - 1)]
+df_source1.columns = ['Table_source1'] + [f'Date_{i+1}' for i in range(5)]
+df_source2.columns = ['Table_source2'] + [f'Date_{i+1}' for i in range(df_source2.shape[1] - 1)]
 
-# Merge the two DataFrames on the 'Table' column
-merged_df = pd.merge(df_source1, df_source2, on='Table', suffixes=('_source1', '_source2'))
+# Remove the .1 suffix from the date headers in the second DataFrame
+df_source2.columns = df_source2.columns.str.replace('.1', '', regex=False)
+
+# Merge the key DataFrame with the source DataFrames
+df_source1 = df_source1.merge(key_df, left_on='Table_source1', right_on='Table_source1', how='left')
+df_source2 = df_source2.merge(key_df, left_on='Table_source2', right_on='Table_source2', how='left')
+
+# Merge the two DataFrames on the key column
+merged_df = pd.merge(df_source1, df_source2, on='Key', suffixes=('_source1', '_source2'))
 
 # Function to compare counts and identify matches and mismatches
 def compare_counts(row):
