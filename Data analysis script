@@ -129,3 +129,74 @@ final_df = pd.concat([merged_df, comparison_results], axis=1)
 final_df.to_excel('comparison_results.xlsx', index=False)
 
 print("Comparison results saved to 'comparison_results.xlsx'")
+
+3rd option:
+import pandas as pd
+
+# Load the Excel files
+file_path = 'path_to_your_excel_file.xlsx'
+key_file_path = 'path_to_your_key_file.xlsx'
+
+# Load the main data file, skipping the first row
+df = pd.read_excel(file_path, skiprows=1)
+
+# Load the key file
+key_df = pd.read_excel(key_file_path)
+
+# Assuming the structure of the DataFrame is known, let's split it into two DataFrames
+# Adjust the column indices based on your actual data structure
+tables_source1 = df.iloc[:, 0]
+counts_source1 = df.iloc[:, 1:6]  # Assuming 5 date columns for source 1
+tables_source2 = df.iloc[:, 6]
+counts_source2 = df.iloc[:, 7:]  # Remaining columns for source 2
+
+# Combine the tables and counts into two DataFrames
+df_source1 = pd.concat([tables_source1, counts_source1], axis=1)
+df_source2 = pd.concat([tables_source2, counts_source2], axis=1)
+
+# Retain original headers
+original_headers_source1 = df.columns[1:6]
+original_headers_source2 = df.columns[7:]
+
+# Rename columns for clarity
+df_source1.columns = ['Table_source1'] + list(original_headers_source1)
+df_source2.columns = ['Table_source2'] + [col.replace('.1', '') for col in original_headers_source2]
+
+# Merge the key DataFrame with the source DataFrames
+df_source1 = df_source1.merge(key_df, left_on='Table_source1', right_on='Table_source1', how='left')
+df_source2 = df_source2.merge(key_df, left_on='Table_source2', right_on='Table_source2', how='left')
+
+# Merge the two DataFrames on the key column
+merged_df = pd.merge(df_source1, df_source2, on='Key', suffixes=('_source1', '_source2'))
+
+# Drop duplicate rows based on the 'Key' column
+merged_df = merged_df.drop_duplicates(subset=['Key'])
+
+# Function to compare counts and identify matches and mismatches
+def compare_counts(row):
+    results = {}
+    for i, date_col in enumerate(original_headers_source1, start=1):
+        date_col_source1 = f'{date_col}_source1'
+        date_col_source2 = f'{date_col}_source2'
+        if date_col_source2 in row.index:
+            if pd.isna(row[date_col_source1]) or pd.isna(row[date_col_source2]):
+                results[f'{date_col}'] = 'Missing Data'
+            elif row[date_col_source1] == row[date_col_source2]:
+                results[f'{date_col}'] = 'Match'
+            else:
+                results[f'{date_col}'] = 'Mismatch'
+        else:
+            results[f'{date_col}'] = 'No Data in Source 2'
+    return pd.Series(results)
+
+# Apply the comparison function to each row
+comparison_results = merged_df.apply(compare_counts, axis=1)
+
+# Combine the comparison results with the original merged DataFrame
+final_df = pd.concat([merged_df, comparison_results], axis=1)
+
+# Save the final DataFrame to a new Excel file
+final_df.to_excel('comparison_results.xlsx', index=False)
+
+print("Comparison results saved to 'comparison_results.xlsx'")
+
