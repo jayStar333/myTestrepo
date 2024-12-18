@@ -1,0 +1,20 @@
+=IFERROR(
+    IF(
+        MATCH(A$1, $E$1:$H$1, 0),
+        IF(
+            VLOOKUP(A$1, $E$1:$H$10, MATCH(A$1, $E$1:$H$1, 0), FALSE) = B2,
+            "Match",
+            "Not Match"
+        ),
+        "Not Present"
+    ),
+    "Not Present"
+)
+
+
+
+Explanation:
+MATCH(A$1, $E$1:$H$1, 0): Checks if the header in column A matches any header in the range E1:H1.
+IFERROR(..., "Not Present"): Handles cases where the header is not found, returning “Not Present”.
+VLOOKUP(A$1, $E$1:$H$10, MATCH(A$1, $E$1:$H$1, 0), FALSE): Looks up the value under the matching header in the second table.
+IF(..., "Match", "Not Match"): Compares the value found by VLOOKUP with the value in column B and returns “Match” or “Not Match”.
