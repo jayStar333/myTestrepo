@@ -1,0 +1,51 @@
+import pandas as pd
+
+# Load the Excel file, skipping the first row
+file_path = 'path_to_your_excel_file.xlsx'
+df = pd.read_excel(file_path, skiprows=1)
+
+# Assuming the structure of the DataFrame is known, let's split it into two DataFrames
+# Adjust the column indices based on your actual data structure
+tables_source1 = df.iloc[:, 0]
+counts_source1 = df.iloc[:, 1:6]  # Assuming 5 date columns for source 1
+tables_source2 = df.iloc[:, 6]
+counts_source2 = df.iloc[:, 7:]  # Remaining columns for source 2
+
+# Combine the tables and counts into two DataFrames
+df_source1 = pd.concat([tables_source1, counts_source1], axis=1)
+df_source2 = pd.concat([tables_source2, counts_source2], axis=1)
+
+# Rename columns for clarity
+df_source1.columns = ['Table'] + [f'Date_{i+1}' for i in range(5)]
+df_source2.columns = ['Table'] + [f'Date_{i+1}' for i in range(df_source2.shape[1] - 1)]
+
+# Merge the two DataFrames on the 'Table' column
+merged_df = pd.merge(df_source1, df_source2, on='Table', suffixes=('_source1', '_source2'))
+
+# Function to compare counts and identify matches and mismatches
+def compare_counts(row):
+    results = {}
+    for i in range(1, 6):
+        date_col_source1 = f'Date_{i}_source1'
+        date_col_source2 = f'Date_{i}_source2'
+        if date_col_source2 in row.index:
+            if pd.isna(row[date_col_source1]) or pd.isna(row[date_col_source2]):
+                results[f'Date_{i}'] = 'Missing Data'
+            elif row[date_col_source1] == row[date_col_source2]:
+                results[f'Date_{i}'] = 'Match'
+            else:
+                results[f'Date_{i}'] = 'Mismatch'
+        else:
+            results[f'Date_{i}'] = 'No Data in Source 2'
+    return pd.Series(results)
+
+# Apply the comparison function to each row
+comparison_results = merged_df.apply(compare_counts, axis=1)
+
+# Combine the comparison results with the original merged DataFrame
+final_df = pd.concat([merged_df, comparison_results], axis=1)
+
+# Save the final DataFrame to a new Excel file
+final_df.to_excel('comparison_results.xlsx', index=False)
+
+print("Comparison results saved to 'comparison_results.xlsx'")
