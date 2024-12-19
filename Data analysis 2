@@ -39,6 +39,54 @@ for i in range(len(dremio_tables)):
 result_df = pd.DataFrame(result)
 print(result_df)
 
+1st option(convert from string):
+import pandas as pd
+
+# Load the Excel file and skip the first row to start from subheaders
+file_path = 'your_file.xlsx'
+df = pd.read_excel(file_path, header=1)  # Adjust 'header=1' to skip the first row
+
+# Convert string counts to integers
+df.iloc[:, 1:6] = df.iloc[:, 1:6].apply(pd.to_numeric, errors='coerce')
+df.iloc[:, 7:12] = df.iloc[:, 7:12].apply(pd.to_numeric, errors='coerce')
+
+# Extract relevant columns
+dremio_tables = df.iloc[:, 0]  # First column: Dremio tables
+sql_tables = df.iloc[:, 6]    # Seventh column: SQL tables
+dates_columns = df.columns[1:6]  # Columns with date headers for Dremio
+sql_dates_columns = df.columns[7:12]  # Columns with date headers for SQL
+
+# Initialize a result DataFrame
+result = []
+
+# Compare counts for each table pair and corresponding dates
+for i in range(len(dremio_tables)):
+    differences = {}
+    for j, date in enumerate(dates_columns):
+        dremio_count = df.iloc[i, j + 1]
+        sql_count = df.iloc[i, j + 7] if j + 7 < len(df.columns) else None
+        
+        if pd.notna(dremio_count) and pd.notna(sql_count):
+            diff = dremio_count - sql_count
+            if diff != 0:
+                differences[date] = str(diff)
+        elif pd.isna(sql_count):
+            differences[date] = "No data"
+    
+    if differences:
+        result.append({
+            "Dremio Table": dremio_tables[i],
+            "SQL Table": sql_tables[i],
+            **differences
+        })
+
+# Convert result to DataFrame and save or print it
+result_df = pd.DataFrame(result)
+print(result_df)
+
+
+
+
 2nd option:
 import pandas as pd
 
