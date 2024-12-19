@@ -1,0 +1,46 @@
+import pandas as pd
+
+# Load the Excel file
+file_path = 'path_to_your_file.xlsx'
+df = pd.read_excel(file_path, skiprows=1)
+
+# Extract the relevant columns
+dremio_tables = df.iloc[:, 0]
+sql_tables = df.iloc[:, 6]
+date_columns = df.columns[1:6]
+sql_date_columns = df.columns[7:12]
+
+# Initialize a list to store the results
+results = []
+
+# Iterate over each row
+for i in range(len(df)):
+    dremio_table = dremio_tables[i]
+    sql_table = sql_tables[i]
+    row_result = {'Dremio': dremio_table, 'SQL': sql_table}
+    
+    for date_col, sql_date_col in zip(date_columns, sql_date_columns):
+        dremio_count = df[date_col][i]
+        sql_count = df[sql_date_col][i] if sql_date_col in df.columns else 'No data'
+        
+        if sql_count != 'No data':
+            dremio_count = int(dremio_count) if pd.notna(dremio_count) else 0
+            sql_count = int(sql_count) if pd.notna(sql_count) else 0
+            difference = dremio_count - sql_count
+            if difference != 0:
+                row_result[date_col] = str(difference)
+            else:
+                row_result[date_col] = '0'
+        else:
+            row_result[date_col] = 'No data'
+    
+    results.append(row_result)
+
+# Create a DataFrame from the results
+result_df = pd.DataFrame(results)
+
+# Filter out rows where all differences are zero
+filtered_df = result_df[(result_df[date_columns] != '0').any(axis=1)]
+
+# Save the result to a new Excel file
+filtered_df.to_excel('path_to_save_results.xlsx', index=False)
