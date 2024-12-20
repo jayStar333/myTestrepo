@@ -1,4 +1,4 @@
-t import pandas as pd
+import pandas as pd
 
 # Load the Excel file
 file_path = 'path_to_your_file.xlsx'
@@ -51,57 +51,3 @@ filtered_df = result_df[(result_df[date_columns] != '0').any(axis=1)]
 
 # Save the result to a new Excel file
 filtered_df.to_excel('path_to_save_results.xlsx', index=False)
-
-
-2nd option:
-
-import pandas as pd
-
-# Load the Excel file and skip the first row to start from subheaders
-file_path = 'your_file.xlsx'
-df = pd.read_excel(file_path, header=1)  # Adjust 'header=1' to skip the first row
-
-# Convert string counts to integers
-df.iloc[:, 1:6] = df.iloc[:, 1:6].apply(pd.to_numeric, errors='coerce')
-df.iloc[:, 7:12] = df.iloc[:, 7:12].apply(pd.to_numeric, errors='coerce')
-
-# Extract relevant columns
-dremio_tables = df.iloc[:, 0]  # First column: Dremio tables
-sql_tables = df.iloc[:, 6]    # Seventh column: SQL tables
-dates_columns_dremio = df.columns[1:6]  # Columns with date headers for Dremio
-dates_columns_sql = df.columns[7:12]    # Columns with date headers for SQL
-
-# Initialize a result DataFrame
-result = []
-
-# Compare counts for each table pair and corresponding dates
-for i in range(len(dremio_tables)):
-    differences = {}
-    for date_dremio in dates_columns_dremio:
-        dremio_count = df.at[i, date_dremio]
-        
-        if date_dremio in dates_columns_sql:
-            sql_index = dates_columns_sql.get_loc(date_dremio)
-            sql_count = df.iat[i, sql_index + 7]
-        else:
-            sql_count = None
-        
-        if pd.notna(dremio_count) and pd.notna(sql_count):
-            diff = dremio_count - sql_count
-            if diff != 0:
-                differences[date_dremio] = str(diff)
-        elif pd.isna(sql_count):
-            differences[date_dremio] = "No data"
-    
-    if differences:
-        result.append({
-            "Dremio Table": dremio_tables[i],
-            "SQL Table": sql_tables[i],
-            **differences
-        })
-
-# Convert result to DataFrame and save or print it
-result_df = pd.DataFrame(result)
-print(result_df)
-
-
