@@ -36,6 +36,54 @@ for i in range(len(df1)):
 # Save the formatted Excel file
 wb.save('formatted_excel_file.xlsx')
 
+#1st style - enhanced:
+
+import pandas as pd
+from openpyxl import load_workbook
+from openpyxl.styles import Font
+
+# Load the Excel file
+file_path = 'your_excel_file.xlsx'
+wb = load_workbook(file_path)
+ws = wb.active
+
+# Read the data into pandas DataFrames
+df1 = pd.read_excel(file_path, sheet_name=ws.title, usecols='A:F', skiprows=1)
+df2 = pd.read_excel(file_path, sheet_name=ws.title, usecols='G:L', skiprows=1)
+
+# Iterate through the rows and compare values
+for j in range(1, 6):
+    header1 = ws.cell(row=2, column=j+1).value
+    for k in range(1, 6):
+        header2 = ws.cell(row=2, column=k+7).value
+        if header1 == header2:
+            # Add a new header for the difference column
+            diff_header = f"Dremio difference for - + ({header1})"
+            ws.cell(row=2, column=ws.max_column + 1, value=diff_header)
+            for i in range(len(df1)):
+                cell1 = ws.cell(row=i+3, column=j+1)
+                cell2 = ws.cell(row=i+3, column=k+7)
+                try:
+                    value1 = int(cell1.value)
+                    value2 = int(cell2.value)
+                except ValueError:
+                    continue  # Skip if conversion to int fails
+                if value1 == value2:
+                    cell1.font = Font(bold=True, color='00FF00')
+                else:
+                    cell1.font = Font(bold=True, color='FF0000')
+                    # Add the difference in the new column
+                    diff_cell = ws.cell(row=i+3, column=ws.max_column)
+                    diff_cell.value = str(value1 - value2)
+                    diff_cell.font = Font(bold=True, color='FF0000')
+                # Convert back to string to prevent float values
+                cell1.value = str(value1)
+
+# Save the formatted Excel file
+wb.save('formatted_excel_file.xlsx')
+
+
+
 
 
 
