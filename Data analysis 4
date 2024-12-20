@@ -37,6 +37,7 @@ for i in range(len(df1)):
 wb.save('formatted_excel_file.xlsx')
 
 #1st style - enhanced:
+
 import pandas as pd
 from openpyxl import load_workbook
 from openpyxl.styles import Font, Alignment, PatternFill
@@ -74,7 +75,36 @@ for j in range(1, 6):
                 cell2 = ws.cell(row=i+3, column=k+7)
                 try:
                     value1 = int(cell1.value)
-                    value2
+                    value2 = int(cell2.value)
+                except ValueError:
+                    continue  # Skip if conversion to int fails
+                if value1 == value2:
+                    cell1.font = Font(bold=True, color='00FF00')
+                else:
+                    cell1.font = Font(bold=True, color='FF0000')
+                    # Add the difference in the new column
+                    diff_cell = ws.cell(row=i+3, column=new_col)
+                    diff_cell.value = str(value1 - value2)
+                    diff_cell.font = Font(bold=True, color='FF0000')
+                    diff_cell.alignment = cell_alignment
+                # Convert back to string to prevent float values
+                cell1.value = str(value1)
+
+# Style existing headers
+for col in range(2, 7):
+    ws.cell(row=2, column=col).font = header_font
+    ws.cell(row=2, column=col).fill = header_fill
+    ws.cell(row=2, column=col).alignment = cell_alignment
+
+for col in range(8, 13):
+    ws.cell(row=2, column=col).font = header_font
+    ws.cell(row=2, column=col).fill = header_fill
+    ws.cell(row=2, column=col).alignment = cell_alignment
+
+# Save the formatted Excel file
+wb.save('formatted_excel_file.xlsx')
+
+
 
 
 
