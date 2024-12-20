@@ -21,10 +21,17 @@ for i in range(len(df1)):
             if header1 == header2:
                 cell1 = ws.cell(row=i+3, column=j+1)
                 cell2 = ws.cell(row=i+3, column=k+7)
-                if cell1.value == cell2.value:
+                try:
+                    value1 = int(cell1.value)
+                    value2 = int(cell2.value)
+                except ValueError:
+                    continue  # Skip if conversion to int fails
+                if value1 == value2:
                     cell1.font = Font(bold=True, color='00FF00')
                 else:
                     cell1.font = Font(bold=True, color='FF0000')
+                # Convert back to string to prevent float values
+                cell1.value = str(value1)
 
 # Save the formatted Excel file
 wb.save('formatted_excel_file.xlsx')
