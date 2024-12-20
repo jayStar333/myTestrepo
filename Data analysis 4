@@ -31,6 +31,7 @@ wb.save('formatted_excel_file.xlsx')
 
 
 
+
 #2nd style....
 import pandas as pd
 import openpyxl
