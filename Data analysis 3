@@ -1,53 +1,64 @@
 import pandas as pd
 
-# Load the Excel file
-file_path = 'path_to_your_file.xlsx'
-df = pd.read_excel(file_path, skiprows=1)
+def ingest_and_compare(file_path):
+    # Read the Excel file, assuming the sheet has the data and the first row contains headers
+    df = pd.read_excel(file_path, header=1)
 
-# Extract the relevant columns
-dremio_tables = df.iloc[:, 0]
-sql_tables = df.iloc[:, 6]
-date_columns = df.columns[1:6]
-sql_date_columns = df.columns[7:12]
+    # Clean up column names if necessary (e.g., removing extra spaces)
+    df.columns = df.columns.str.strip()
 
-# Initialize a list to store the results
-results = []
+    # Split the dataframe into Dremio and SQL table sets
+    # Assuming the first set of columns are for Dremio and the second set are for SQL
+    date_columns = [col for col in df.columns if '/' in col]  # columns containing dates
+    table_columns_dremio = df.columns[:len(df.columns)//2]  # Assuming first half is Dremio
+    table_columns_sql = df.columns[len(df.columns)//2:]  # Assuming second half is SQL
 
-# Function to safely convert to integer
-def safe_int(value):
-    try:
-        return int(value)
-    except (ValueError, TypeError):
-        return 0
-
-# Iterate over each row
-for i in range(len(df)):
-    dremio_table = dremio_tables[i]
-    sql_table = sql_tables[i]
-    row_result = {'Dremio': dremio_table, 'SQL': sql_table}
+    # Convert the date columns to strings if not already
+    date_columns = [col for col in df.columns if '/' in col]
     
-    for date_col, sql_date_col in zip(date_columns, sql_date_columns):
-        dremio_count = df[date_col][i]
-        sql_count = df[sql_date_col][i] if sql_date_col in df.columns else 'No data'
-        
-        if sql_count != 'No data':
-            dremio_count = safe_int(dremio_count)
-            sql_count = safe_int(sql_count)
-            difference = dremio_count - sql_count
-            if difference != 0:
-                row_result[date_col] = str(difference)
-            else:
-                row_result[date_col] = '0'
-        else:
-            row_result[date_col] = 'No data'
+    # Extract Dremio and SQL table data
+    dremio_data = df[table_columns_dremio + date_columns]
+    sql_data = df[table_columns_sql + date_columns]
     
-    results.append(row_result)
+    # Rename the Dremio and SQL tables to match "Dremio" and "SQL" headers
+    dremio_data = dremio_data.rename(columns={col: f'Dremio_{col}' for col in dremio_data.columns})
+    sql_data = sql_data.rename(columns={col: f'SQL_{col}' for col in sql_data.columns})
+    
+    # Merge both dataframes on the table names (which are assumed to be in the first column of each set)
+    merged_df = pd.merge(dremio_data, sql_data, left_on=f'Dremio_{table_columns_dremio[0]}', 
+                         right_on=f'SQL_{table_columns_sql[0]}', suffixes=('_Dremio', '_SQL'))
+    
+    # Convert the date columns to integers for comparison (and handle potential errors)
+    for date_col in date_columns:
+        merged_df[date_col + '_Dremio'] = pd.to_numeric(merged_df[date_col + '_Dremio'], errors='coerce').fillna(0).astype(int)
+        merged_df[date_col + '_SQL'] = pd.to_numeric(merged_df[date_col + '_SQL'], errors='coerce').fillna(0).astype(int)
+    
+    # Now calculate the difference between Dremio and SQL for each date column
+    diff_columns = []
+    for date_col in date_columns:
+        diff_col_name = f'Diff_{date_col}'
+        merged_df[diff_col_name] = merged_df[date_col + '_Dremio'] - merged_df[date_col + '_SQL']
+        diff_columns.append(diff_col_name)
+    
+    # Filter out rows where the differences are zero across all date columns
+    non_zero_diff_df = merged_df[merged_df[diff_columns].neq(0).any(axis=1)]
+    
+    # Only include the relevant columns: table name, dates, and differences
+    final_columns = [f'Dremio_{table_columns_dremio[0]}', f'SQL_{table_columns_sql[0]}'] + diff_columns
+    non_zero_diff_df = non_zero_diff_df[final_columns]
 
-# Create a DataFrame from the results
-result_df = pd.DataFrame(results)
+    # Replace any difference with "No data" if there's no corresponding data (i.e., zero)
+    for date_col in date_columns:
+        non_zero_diff_df[date_col].replace(0, 'No data', inplace=True)
 
-# Filter out rows where all differences are zero
-filtered_df = result_df[(result_df[date_columns] != '0').any(axis=1)]
+    # Convert the values back to strings
+    non_zero_diff_df = non_zero_diff_df.applymap(str)
 
-# Save the result to a new Excel file
-filtered_df.to_excel('path_to_save_results.xlsx', index=False)
+    return non_zero_diff_df
+
+# Usage example
+file_path = 'your_file.xlsx'  # Provide your file path here
+result_df = ingest_and_compare(file_path)
+
+# Display the final result
+print(result_df)
