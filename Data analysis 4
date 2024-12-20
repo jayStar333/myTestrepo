@@ -1,8 +1,7 @@
 #1st style....
 import pandas as pd
 from openpyxl import load_workbook
-from openpyxl.styles import Font, PatternFill
-import matplotlib.pyplot as plt
+from openpyxl.styles import Font
 
 # Load the Excel file
 file_path = 'your_excel_file.xlsx'
@@ -17,28 +16,20 @@ df2 = pd.read_excel(file_path, sheet_name=ws.title, usecols='G:L', skiprows=1)
 for i in range(len(df1)):
     for j in range(1, 6):
         header1 = ws.cell(row=2, column=j+1).value
-        header2 = ws.cell(row=2, column=j+7).value
-        if header1 == header2:
-            cell1 = ws.cell(row=i+3, column=j+1)
-            cell2 = ws.cell(row=i+3, column=j+7)
-            if cell1.value == cell2.value:
-                cell1.font = Font(bold=True, color='00FF00')
-            else:
-                cell1.font = Font(bold=True, color='FF0000')
+        for k in range(1, 6):
+            header2 = ws.cell(row=2, column=k+7).value
+            if header1 == header2:
+                cell1 = ws.cell(row=i+3, column=j+1)
+                cell2 = ws.cell(row=i+3, column=k+7)
+                if cell1.value == cell2.value:
+                    cell1.font = Font(bold=True, color='00FF00')
+                else:
+                    cell1.font = Font(bold=True, color='FF0000')
 
 # Save the formatted Excel file
 wb.save('formatted_excel_file.xlsx')
 
-# Create a simple dashboard
-fig, ax = plt.subplots()
-df1.set_index('Table').plot(kind='bar', ax=ax)
-plt.title('Table Data Comparison')
-plt.xlabel('Tables')
-plt.ylabel('Values')
-plt.legend(title='Days')
-plt.tight_layout()
-plt.savefig('dashboard.png')
-plt.show()
+
 
 #2nd style....
 import pandas as pd
