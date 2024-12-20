@@ -1,4 +1,4 @@
-import pandas as pd
+t import pandas as pd
 
 # Load the Excel file
 file_path = 'path_to_your_file.xlsx'
@@ -13,6 +13,13 @@ sql_date_columns = df.columns[7:12]
 # Initialize a list to store the results
 results = []
 
+# Function to safely convert to integer
+def safe_int(value):
+    try:
+        return int(value)
+    except (ValueError, TypeError):
+        return 0
+
 # Iterate over each row
 for i in range(len(df)):
     dremio_table = dremio_tables[i]
@@ -24,8 +31,8 @@ for i in range(len(df)):
         sql_count = df[sql_date_col][i] if sql_date_col in df.columns else 'No data'
         
         if sql_count != 'No data':
-            dremio_count = int(dremio_count) if pd.notna(dremio_count) else 0
-            sql_count = int(sql_count) if pd.notna(sql_count) else 0
+            dremio_count = safe_int(dremio_count)
+            sql_count = safe_int(sql_count)
             difference = dremio_count - sql_count
             if difference != 0:
                 row_result[date_col] = str(difference)
