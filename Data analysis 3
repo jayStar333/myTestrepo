@@ -54,6 +54,7 @@ filtered_df.to_excel('path_to_save_results.xlsx', index=False)
 
 
 2nd option:
+
 import pandas as pd
 
 # Load the Excel file and skip the first row to start from subheaders
@@ -67,8 +68,8 @@ df.iloc[:, 7:12] = df.iloc[:, 7:12].apply(pd.to_numeric, errors='coerce')
 # Extract relevant columns
 dremio_tables = df.iloc[:, 0]  # First column: Dremio tables
 sql_tables = df.iloc[:, 6]    # Seventh column: SQL tables
-dates_columns = df.columns[1:6]  # Columns with date headers for Dremio
-sql_dates_columns = df.columns[7:12]  # Columns with date headers for SQL
+dates_columns_dremio = df.columns[1:6]  # Columns with date headers for Dremio
+dates_columns_sql = df.columns[7:12]    # Columns with date headers for SQL
 
 # Initialize a result DataFrame
 result = []
@@ -76,20 +77,21 @@ result = []
 # Compare counts for each table pair and corresponding dates
 for i in range(len(dremio_tables)):
     differences = {}
-    for j, date in enumerate(dates_columns):
-        dremio_count = df.iloc[i, j + 1]
-        if date in sql_dates_columns:
-            sql_index = sql_dates_columns.get_loc(date)
-            sql_count = df.iloc[i, sql_index + 7]
+    for date_dremio in dates_columns_dremio:
+        dremio_count = df.at[i, date_dremio]
+        
+        if date_dremio in dates_columns_sql:
+            sql_index = dates_columns_sql.get_loc(date_dremio)
+            sql_count = df.iat[i, sql_index + 7]
         else:
             sql_count = None
         
         if pd.notna(dremio_count) and pd.notna(sql_count):
             diff = dremio_count - sql_count
             if diff != 0:
-                differences[date] = str(diff)
+                differences[date_dremio] = str(diff)
         elif pd.isna(sql_count):
-            differences[date] = "No data"
+            differences[date_dremio] = "No data"
     
     if differences:
         result.append({
@@ -101,4 +103,5 @@ for i in range(len(dremio_tables)):
 # Convert result to DataFrame and save or print it
 result_df = pd.DataFrame(result)
 print(result_df)
+
 
