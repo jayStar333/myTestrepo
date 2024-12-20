@@ -7,28 +7,39 @@ def ingest_and_compare(file_path):
     # Clean up column names if necessary (e.g., removing extra spaces)
     df.columns = df.columns.str.strip()
 
-    # Split the dataframe into Dremio and SQL table sets
-    # Assuming the first set of columns are for Dremio and the second set are for SQL
-    date_columns = [col for col in df.columns if '/' in col]  # columns containing dates
-    table_columns_dremio = df.columns[:len(df.columns)//2]  # Assuming first half is Dremio
-    table_columns_sql = df.columns[len(df.columns)//2:]  # Assuming second half is SQL
+    # Print the first few rows to understand the structure of the data
+    print("First few rows of the dataframe:")
+    print(df.head())
 
-    # Convert the date columns to strings if not already
-    date_columns = [col for col in df.columns if '/' in col]
+    # Extract columns containing date information
+    date_columns = [col for col in df.columns if '/' in col]  # columns containing dates
+    print("Date columns identified:", date_columns)
+
+    # Assuming the first half of the columns belong to Dremio and the second half to SQL
+    # Split the columns into two groups: Dremio and SQL
+    table_columns_dremio = df.columns[:len(df.columns)//2]  # Dremio columns (tables + counts)
+    table_columns_sql = df.columns[len(df.columns)//2:]    # SQL columns (tables + counts)
     
-    # Extract Dremio and SQL table data
+    print("Dremio table columns:", table_columns_dremio)
+    print("SQL table columns:", table_columns_sql)
+
+    # Extract Dremio and SQL table data separately
     dremio_data = df[table_columns_dremio + date_columns]
     sql_data = df[table_columns_sql + date_columns]
-    
-    # Rename the Dremio and SQL tables to match "Dremio" and "SQL" headers
+
+    # Rename columns for easier identification (Dremio_ and SQL_)
     dremio_data = dremio_data.rename(columns={col: f'Dremio_{col}' for col in dremio_data.columns})
     sql_data = sql_data.rename(columns={col: f'SQL_{col}' for col in sql_data.columns})
-    
-    # Merge both dataframes on the table names (which are assumed to be in the first column of each set)
+
+    # Merge Dremio and SQL data on table names (assumed to be in the first column of each set)
     merged_df = pd.merge(dremio_data, sql_data, left_on=f'Dremio_{table_columns_dremio[0]}', 
                          right_on=f'SQL_{table_columns_sql[0]}', suffixes=('_Dremio', '_SQL'))
     
-    # Convert the date columns to integers for comparison (and handle potential errors)
+    print("Merged dataframe shape:", merged_df.shape)
+    print("First few rows of the merged dataframe:")
+    print(merged_df.head())
+
+    # Convert date columns to integers for comparison, and handle potential errors
     for date_col in date_columns:
         merged_df[date_col + '_Dremio'] = pd.to_numeric(merged_df[date_col + '_Dremio'], errors='coerce').fillna(0).astype(int)
         merged_df[date_col + '_SQL'] = pd.to_numeric(merged_df[date_col + '_SQL'], errors='coerce').fillna(0).astype(int)
@@ -39,10 +50,14 @@ def ingest_and_compare(file_path):
         diff_col_name = f'Diff_{date_col}'
         merged_df[diff_col_name] = merged_df[date_col + '_Dremio'] - merged_df[date_col + '_SQL']
         diff_columns.append(diff_col_name)
-    
+
     # Filter out rows where the differences are zero across all date columns
     non_zero_diff_df = merged_df[merged_df[diff_columns].neq(0).any(axis=1)]
-    
+
+    print("Shape of the filtered dataframe with non-zero differences:", non_zero_diff_df.shape)
+    print("First few rows of the non-zero difference dataframe:")
+    print(non_zero_diff_df.head())
+
     # Only include the relevant columns: table name, dates, and differences
     final_columns = [f'Dremio_{table_columns_dremio[0]}', f'SQL_{table_columns_sql[0]}'] + diff_columns
     non_zero_diff_df = non_zero_diff_df[final_columns]
