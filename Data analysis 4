@@ -1,0 +1,193 @@
+#1st style....
+import pandas as pd
+from openpyxl import load_workbook
+from openpyxl.styles import Font, PatternFill
+import matplotlib.pyplot as plt
+
+# Load the Excel file
+file_path = 'your_excel_file.xlsx'
+wb = load_workbook(file_path)
+ws = wb.active
+
+# Read the data into pandas DataFrames
+df1 = pd.read_excel(file_path, sheet_name=ws.title, usecols='A:F', skiprows=1)
+df2 = pd.read_excel(file_path, sheet_name=ws.title, usecols='G:L', skiprows=1)
+
+# Iterate through the rows and compare values
+for i in range(len(df1)):
+    for j in range(1, 6):
+        header1 = ws.cell(row=2, column=j+1).value
+        header2 = ws.cell(row=2, column=j+7).value
+        if header1 == header2:
+            cell1 = ws.cell(row=i+3, column=j+1)
+            cell2 = ws.cell(row=i+3, column=j+7)
+            if cell1.value == cell2.value:
+                cell1.font = Font(bold=True, color='00FF00')
+            else:
+                cell1.font = Font(bold=True, color='FF0000')
+
+# Save the formatted Excel file
+wb.save('formatted_excel_file.xlsx')
+
+# Create a simple dashboard
+fig, ax = plt.subplots()
+df1.set_index('Table').plot(kind='bar', ax=ax)
+plt.title('Table Data Comparison')
+plt.xlabel('Tables')
+plt.ylabel('Values')
+plt.legend(title='Days')
+plt.tight_layout()
+plt.savefig('dashboard.png')
+plt.show()
+
+#2nd style....
+import pandas as pd
+import openpyxl
+from openpyxl.styles import Font, Color, PatternFill
+import matplotlib.pyplot as plt
+
+def format_excel(file_path):
+    # Load the workbook and select the active sheet
+    wb = openpyxl.load_workbook(file_path)
+    ws = wb.active
+
+    # Read headers from B2:F2 and H2:L2
+    headers_1 = [ws.cell(row=2, column=c).value for c in range(2, 7)]  # B2:F2
+    headers_2 = [ws.cell(row=2, column=c).value for c in range(8, 13)]  # H2:L2
+
+    # Iterate through rows 3 to the end of the data
+    for row_num in range(3, ws.max_row + 1):
+        # Read the row values in columns B:F (set 1) and H:L (set 2)
+        set_1_values = [ws.cell(row=row_num, column=c).value for c in range(2, 7)]  # B3:F3
+        set_2_values = [ws.cell(row=row_num, column=c).value for c in range(8, 13)]  # H3:L3
+
+        # Compare headers to find matching columns
+        for idx_1, header_1 in enumerate(headers_1):
+            if header_1 in headers_2:
+                idx_2 = headers_2.index(header_1)
+                
+                # If corresponding values are the same, color green, else red
+                if set_1_values[idx_1] == set_2_values[idx_2]:
+                    ws.cell(row=row_num, column=2+idx_1).font = Font(bold=True, color="00FF00")  # Green
+                else:
+                    ws.cell(row=row_num, column=2+idx_1).font = Font(bold=True, color="FF0000")  # Red
+
+    # Save the modified workbook
+    wb.save('formatted_' + file_path)
+
+def generate_dashboard(file_path):
+    # Load the workbook and read the necessary data
+    wb = openpyxl.load_workbook(file_path)
+    ws = wb.active
+
+    # Extract headers and values
+    headers_1 = [ws.cell(row=2, column=c).value for c in range(2, 7)]  # B2:F2
+    headers_2 = [ws.cell(row=2, column=c).value for c in range(8, 13)]  # H2:L2
+    
+    # Store the matching and non-matching values
+    matching_data = {'Header': [], 'Matching Values': []}
+    non_matching_data = {'Header': [], 'Non-Matching Values': []}
+
+    # Iterate over the rows and compare the values
+    for row_num in range(3, ws.max_row + 1):
+        set_1_values = [ws.cell(row=row_num, column=c).value for c in range(2, 7)]
+        set_2_values = [ws.cell(row=row_num, column=c).value for c in range(8, 13)]
+        
+        for idx_1, header_1 in enumerate(headers_1):
+            if header_1 in headers_2:
+                idx_2 = headers_2.index(header_1)
+                if set_1_values[idx_1] == set_2_values[idx_2]:
+                    matching_data['Header'].append(header_1)
+                    matching_data['Matching Values'].append(set_1_values[idx_1])
+                else:
+                    non_matching_data['Header'].append(header_1)
+                    non_matching_data['Non-Matching Values'].append(set_1_values[idx_1])
+
+    # Create a Dashboard with a Bar Chart for visualization
+    fig, ax = plt.subplots(figsize=(10, 6))
+    
+    # Visualize matching vs non-matching data counts
+    matching_count = len(matching_data['Matching Values'])
+    non_matching_count = len(non_matching_data['Non-Matching Values'])
+    
+    ax.bar(['Matching Values', 'Non-Matching Values'], [matching_count, non_matching_count], color=['green', 'red'])
+    ax.set_title('Matching vs Non-Matching Values')
+    ax.set_ylabel('Count')
+    ax.set_xlabel('Categories')
+    ax.set_ylim(0, max(matching_count, non_matching_count) + 10)
+
+    # Save the dashboard as an image
+    plt.savefig('dashboard.png', dpi=300)
+    plt.show()
+
+    # Optionally, you can write the matching and non-matching data to a new Excel sheet
+    dashboard_wb = openpyxl.Workbook()
+    dashboard_ws = dashboard_wb.active
+    dashboard_ws.title = 'Dashboard'
+    
+    # Write matching data
+    dashboard_ws.append(['Header', 'Matching Values'])
+    for header, value in zip(matching_data['Header'], matching_data['Matching Values']):
+        dashboard_ws.append([header, value])
+
+    # Write non-matching data
+    dashboard_ws.append(['Header', 'Non-Matching Values'])
+    for header, value in zip(non_matching_data['Header'], non_matching_data['Non-Matching Values']):
+        dashboard_ws.append([header, value])
+
+    # Save the dashboard to Excel
+    dashboard_wb.save('dashboard_output.xlsx')
+
+# Input file path
+file_path = 'your_excel_file.xlsx'
+
+# Format the Excel file based on the comparison
+format_excel(file_path)
+
+# Generate a visual dashboard
+generate_dashboard('formatted_' + file_path)
+
+#3rd style.......VBA
+Sub AnalyzeAndFormat()
+    Dim ws As Worksheet
+    Dim lastRow As Long, i As Long, j As Long
+    Dim header1 As Range, header2 As Range
+    Dim cell1 As Range, cell2 As Range
+    
+    ' Set worksheet
+    Set ws = ThisWorkbook.Sheets(1)
+    
+    ' Define headers ranges
+    Set header1 = ws.Range("B2:F2")
+    Set header2 = ws.Range("H2:L2")
+    
+    ' Find last row of data
+    lastRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row
+    
+    ' Loop through rows starting from row 3
+    For i = 3 To lastRow
+        For Each cell1 In header1
+            For Each cell2 In header2
+                ' Check if headers match
+                If cell1.Value = cell2.Value Then
+                    ' Compare corresponding values in the same row
+                    If ws.Cells(i, cell1.Column).Value = ws.Cells(i, cell2.Column).Value Then
+                        ' Format as bold green if values match
+                        With ws.Cells(i, cell1.Column).Font
+                            .Bold = True
+                            .Color = RGB(0, 255, 0)
+                        End With
+                    Else
+                        ' Format as bold red if values don't match
+                        With ws.Cells(i, cell1.Column).Font
+                            .Bold = True
+                            .Color = RGB(255, 0, 0)
+                        End With
+                    End If
+                End If
+            Next cell2
+        Next cell1
+    Next i
+    
+    MsgBox "Formatting Complete!"
+End Sub
