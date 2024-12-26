@@ -4,6 +4,9 @@ import pandas as pd
 file_path = 'your_file.xlsx'
 df = pd.read_excel(file_path, header=1)  # Headers are in the second row
 
+# Convert column headers to strings
+df.columns = df.columns.map(str)
+
 # Identify columns with 'Dremio difference' suffix
 dremio_columns = [col for col in df.columns if col.endswith('Dremio difference')]
 
