@@ -1,0 +1,17 @@
+import pandas as pd
+
+# Read the Excel file
+file_path = 'your_file.xlsx'
+df = pd.read_excel(file_path, header=1)  # Headers are in the second row
+
+# Identify columns with 'Dremio difference' suffix
+dremio_columns = [col for col in df.columns if col.endswith('Dremio difference')]
+
+# Select the required columns
+selected_columns = ['A3', 'H3'] + dremio_columns
+
+# Filter the dataframe to include only the selected columns
+filtered_df = df[selected_columns]
+
+# Save the filtered dataframe to a new Excel file
+filtered_df.to_excel('filtered_output.xlsx', index=False)
