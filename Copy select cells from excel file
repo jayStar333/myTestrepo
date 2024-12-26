@@ -1,20 +1,22 @@
 import pandas as pd
 
-# Read the Excel file
+# Read the Excel file and specify the header row
 file_path = 'your_file.xlsx'
-df = pd.read_excel(file_path, header=1)  # Headers are in the second row
+df = pd.read_excel(file_path, header=1)  # Header is in the second row (index 1)
 
-# Convert column headers to strings
-df.columns = df.columns.map(str)
+# Convert all column headers to strings
+df.columns = df.columns.astype(str)
 
-# Identify columns with 'Dremio difference' suffix
+# Identify columns of interest
+columns_of_interest = ['VDS', 'SQL Table']
+columns_of_interest += [col for col in df.columns if col.endswith('Dremio difference')]
+
+# Filter rows where at least one 'Dremio difference' column has a value
 dremio_columns = [col for col in df.columns if col.endswith('Dremio difference')]
+filtered_df = df[df[dremio_columns].notnull().any(axis=1)]
 
-# Select the required columns
-selected_columns = ['A3', 'H3'] + dremio_columns
+# Select relevant columns
+result_df = filtered_df[columns_of_interest]
 
-# Filter the dataframe to include only the selected columns
-filtered_df = df[selected_columns]
-
-# Save the filtered dataframe to a new Excel file
-filtered_df.to_excel('filtered_output.xlsx', index=False)
+# Save to a new Excel file
+result_df.to_excel('filtered_output.xlsx', index=False)
