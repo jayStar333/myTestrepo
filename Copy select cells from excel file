@@ -19,3 +19,4 @@ result_df = filtered_df[static_columns + dynamic_columns]
 
 # Save the result to a new Excel file
 result_df.to_excel('filtered_output.xlsx', index=False)
+
