@@ -2,26 +2,20 @@ import pandas as pd
 
 # Read the Excel file
 file_path = 'your_excel_file.xlsx'
-df = pd.read_excel(file_path, header=1)  # Headers are in the second row (index 1)
+df = pd.read_excel(file_path, header=1)  # Headers are in the second row
 
 # Convert all column headers to string
 df.columns = df.columns.astype(str)
 
-# Identify columns ending with "Dremio difference"
-dremio_diff_columns = [col for col in df.columns if col.endswith('Dremio difference')]
-print("Dremio difference columns:", dremio_diff_columns)
+# Identify the columns of interest
+static_columns = ['VDS', 'SQLTable']
+dynamic_columns = [col for col in df.columns if col.endswith(' Dremio difference')]
 
-# Select the columns "VDS", "SQLTable" and those ending with "Dremio difference"
-selected_columns = ['VDS', 'SQLTable'] + dremio_diff_columns
-print("Selected columns:", selected_columns)
+# Filter rows that have at least one entry in any of the dynamic columns
+filtered_df = df[df[dynamic_columns].notna().any(axis=1)]
 
-# Filter rows that have at least one entry in any of the "Dremio difference" columns
-filtered_df = df[df[dremio_diff_columns].notna().any(axis=1)]
-print("Filtered DataFrame:\n", filtered_df)
-
-# Select only the required columns
-result_df = filtered_df[selected_columns]
-print("Result DataFrame:\n", result_df)
+# Select the required columns
+result_df = filtered_df[static_columns + dynamic_columns]
 
 # Save the result to a new Excel file
-result_df.to_excel('filtered_data.xlsx', index=False)
+result_df.to_excel('filtered_output.xlsx', index=False)
