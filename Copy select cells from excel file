@@ -9,15 +9,19 @@ df.columns = df.columns.astype(str)
 
 # Identify columns ending with "Dremio difference"
 dremio_diff_columns = [col for col in df.columns if col.endswith('Dremio difference')]
+print("Dremio difference columns:", dremio_diff_columns)
 
 # Select the columns "VDS", "SQLTable" and those ending with "Dremio difference"
 selected_columns = ['VDS', 'SQLTable'] + dremio_diff_columns
+print("Selected columns:", selected_columns)
 
 # Filter rows that have at least one entry in any of the "Dremio difference" columns
 filtered_df = df[df[dremio_diff_columns].notna().any(axis=1)]
+print("Filtered DataFrame:\n", filtered_df)
 
 # Select only the required columns
 result_df = filtered_df[selected_columns]
+print("Result DataFrame:\n", result_df)
 
 # Save the result to a new Excel file
 result_df.to_excel('filtered_data.xlsx', index=False)
