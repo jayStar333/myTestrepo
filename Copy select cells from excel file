@@ -1,22 +1,20 @@
 import pandas as pd
 
-# Read the Excel file and specify the header row
-file_path = 'your_file.xlsx'
-df = pd.read_excel(file_path, header=1)  # Header is in the second row (index 1)
+# Read the Excel file
+file_path = 'your_excel_file.xlsx'
+df = pd.read_excel(file_path, header=1)  # Headers are in the second row (index 1)
 
-# Convert all column headers to strings
+# Convert all column headers to string
 df.columns = df.columns.astype(str)
 
-# Identify columns of interest
-columns_of_interest = ['VDS', 'SQL Table']
-columns_of_interest += [col for col in df.columns if col.endswith('Dremio difference')]
+# Select the columns "VDS" and "SQLTable" and those ending with "Dremio difference"
+selected_columns = ['VDS', 'SQLTable'] + [col for col in df.columns if col.endswith('Dremio difference')]
 
-# Filter rows where at least one 'Dremio difference' column has a value
-dremio_columns = [col for col in df.columns if col.endswith('Dremio difference')]
-filtered_df = df[df[dremio_columns].notnull().any(axis=1)]
+# Filter rows that have at least one entry in any of the "Dremio difference" columns
+filtered_df = df[df[[col for col in df.columns if col.endswith('Dremio difference')]].notna().any(axis=1)]
 
-# Select relevant columns
-result_df = filtered_df[columns_of_interest]
+# Select only the required columns
+result_df = filtered_df[selected_columns]
 
-# Save to a new Excel file
-result_df.to_excel('filtered_output.xlsx', index=False)
+# Save the result to a new Excel file
+result_df.to_excel('filtered_data.xlsx', index=False)
