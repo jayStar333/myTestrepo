@@ -1,0 +1,31 @@
+import pandas as pd
+
+# Load the Excel file
+df = pd.read_excel('your_file.xlsx', sheet_name='Sheet1')
+
+# Display the DataFrame to understand its structure
+print(df.head())
+
+def generate_sql(df):
+    sql_statements = []
+    for index, row in df.iterrows():
+        source_columns = row['Source Column Names'].split(',')
+        proposed_names = row['Proposed Names'].split(',')
+        column_functions = row['Column Functions'].split(',')
+        conditions = row['Conditions'].split(',')
+        
+        columns_sql = []
+        for source, proposed, func, cond in zip(source_columns, proposed_names, column_functions, conditions):
+            column_sql = f"{func}({source}) AS {proposed}" if func else f"{source} AS {proposed}"
+            if cond:
+                column_sql += f" {cond}"
+            columns_sql.append(column_sql)
+        
+        sql_statement = f"SELECT {', '.join(columns_sql)} FROM your_table_name;"
+        sql_statements.append(sql_statement)
+    
+    return sql_statements
+
+sql_statements = generate_sql(df)
+for sql in sql_statements:
+    print(sql)
