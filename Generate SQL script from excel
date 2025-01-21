@@ -3,21 +3,18 @@ import pandas as pd
 # Load the Excel file
 df = pd.read_excel('your_file.xlsx', sheet_name='Sheet1')
 
-# Display the DataFrame to understand its structure
-print(df.head())
-
-def convert_to_string(value):
+def escape_special_chars(value):
     if pd.isna(value):
         return ""
-    return str(value)
+    return str(value).replace("'", "''")
 
 def generate_sql(df):
     sql_statements = []
     for index, row in df.iterrows():
-        source_columns = convert_to_string(row['Source Column Names']).split(',')
-        proposed_names = convert_to_string(row['Proposed Names']).split(',')
-        column_functions = convert_to_string(row['Column Functions']).split(',')
-        conditions = convert_to_string(row['Conditions']).split(',')
+        source_columns = escape_special_chars(row['Source Column Names']).split(',')
+        proposed_names = escape_special_chars(row['Proposed Names']).split(',')
+        column_functions = escape_special_chars(row['Column Functions']).split(',')
+        conditions = escape_special_chars(row['Conditions']).split(',')
         
         columns_sql = []
         for source, proposed, func, cond in zip(source_columns, proposed_names, column_functions, conditions):
