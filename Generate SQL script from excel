@@ -6,13 +6,18 @@ df = pd.read_excel('your_file.xlsx', sheet_name='Sheet1')
 # Display the DataFrame to understand its structure
 print(df.head())
 
+def convert_to_string(value):
+    if pd.isna(value):
+        return ""
+    return str(value)
+
 def generate_sql(df):
     sql_statements = []
     for index, row in df.iterrows():
-        source_columns = row['Source Column Names'].split(',')
-        proposed_names = row['Proposed Names'].split(',')
-        column_functions = row['Column Functions'].split(',')
-        conditions = row['Conditions'].split(',')
+        source_columns = convert_to_string(row['Source Column Names']).split(',')
+        proposed_names = convert_to_string(row['Proposed Names']).split(',')
+        column_functions = convert_to_string(row['Column Functions']).split(',')
+        conditions = convert_to_string(row['Conditions']).split(',')
         
         columns_sql = []
         for source, proposed, func, cond in zip(source_columns, proposed_names, column_functions, conditions):
