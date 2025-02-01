@@ -1,0 +1,103 @@
+Shell Scripting Cheat Sheet
+# Shell Scripting Cheat Sheet
+
+1. Shebang (Interpreter Directive)
+#!/bin/bash # Use Bash shell
+#!/bin/sh # Use default system shell
+#!/usr/bin/env bash # Portable shebang
+
+
+2. Variables
+NAME="John"
+echo "Hello, $NAME" # Use variable
+echo "Hello, ${NAME}" # Preferred for safety
+
+Special Variables
+$0 -> Script name
+$1-$9 -> Arguments passed to script
+$# -> Number of arguments
+$@ -> All arguments (individually)
+"$*" -> All arguments as a single string
+$$ -> Process ID of the script
+$? -> Exit status of the last command
+
+3. User Input
+echo "Enter your name:"
+read NAME
+echo "Hello, $NAME!"
+
+4. Conditionals
+### If-Else
+if [ "$NAME" == "John" ]; then
+echo "Welcome, John!"
+elif [ "$NAME" == "Alice" ]; then
+echo "Welcome, Alice!"
+else
+echo "Who are you?"
+fi
+### Comparison Operators
+-eq -> Equal to
+-ne -> Not equal to
+-lt -> Less than
+-le -> Less than or equal to
+-gt -> Greater than
+-ge -> Greater than or equal to
+
+5. Loops
+### For Loop
+for i in 1 2 3 4 5; do
+echo "Number: $i"
+done
+### While Loop
+COUNT=0
+while [ $COUNT -lt 5 ]; do
+echo "Count: $COUNT"
+((COUNT++))
+done
+
+6. Functions
+function say_hello() {
+echo "Hello, $1!"
+}
+say_hello "Alice"
+
+7. Case Statement
+read -p "Enter a fruit: " FRUIT
+case "$FRUIT" in
+"apple") echo "You chose Apple";;
+"banana") echo "You chose Banana";;
+*) echo "Unknown fruit";;
+esac
+
+8. File Operations
+### Check if File Exists
+if [ -f "file.txt" ]; then
+echo "File exists"
+fi
+### Create a File
+touch file.txt
+
+9. Process Management
+ps aux # List processes
+kill 1234 # Kill process by PID
+
+10. Permissions
+chmod +x script.sh # Make script executable
+
+11. Redirection & Pipes
+command > file.txt # Redirect output to file (overwrite)
+command | grep "test" # Pipe output
+
+12. Background & Foreground Jobs
+command & # Run command in background
+jobs # List background jobs
+
+13. Script Debugging
+bash -x script.sh # Show command execution
+
+14. Cron Jobs (Scheduled Tasks)
+crontab -e # Edit cron jobs
+
+15. Networking
+ping -c 4 google.com # Ping a host
+wget http://example.com # Download file
