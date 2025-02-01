@@ -1,0 +1,110 @@
+Basic Commands
+pwd: Print working directory
+
+ls: List directory contents
+
+cd [directory]: Change directory
+
+mkdir [directory]: Create a new directory
+
+rmdir [directory]: Remove an empty directory
+
+rm [file]: Remove a file
+
+cp [source] [destination]: Copy a file or directory
+
+mv [source] [destination]: Move or rename a file or directory
+
+File Permissions
+chmod [options] [file]: Change file permissions
+
+chmod 755 [file]: Owner can read, write, and execute; others can read and execute
+
+chmod 644 [file]: Owner can read and write; others can only read
+
+chown [owner]:[group] [file]: Change file owner and group
+
+Text Processing
+cat [file]: Display file contents
+
+less [file]: View file contents one screen at a time
+
+head [file]: Display the first 10 lines of a file
+
+tail [file]: Display the last 10 lines of a file
+
+grep [pattern] [file]: Search for a pattern in a file
+
+awk '{print $1}' [file]: Print the first column from a file
+
+sed 's/old/new/g' [file]: Replace occurrences of 'old' with 'new' in a file
+
+Variables
+VAR=value: Set a variable
+
+$VAR: Access the value of a variable
+
+export VAR: Make a variable available to child processes
+
+unset VAR: Remove a variable
+
+Conditional Statements
+if [condition]; then ... fi: Basic if statement
+
+if [condition]; then ... else ... fi: If-else statement
+
+if [condition1]; then ... elif [condition2]; then ... fi: If-elif statement
+
+Loops
+for var in list; do ... done: For loop
+
+while [condition]; do ... done: While loop
+
+until [condition]; do ... done: Until loop
+
+Functions
+function_name() { ... }: Define a function
+
+function_name: Call a function
+
+File Descriptors
+0: Standard input
+
+1: Standard output
+
+2: Standard error
+
+Redirection
+command > file: Redirect standard output to a file
+
+command >> file: Append standard output to a file
+
+command < file: Use a file as standard input
+
+command 2> file: Redirect standard error to a file
+
+Pipes
+command1 | command2: Use the output of command1 as input for command2
+
+Useful Commands
+find [path] -name [pattern]: Find files and directories
+
+tar -cvf archive.tar [file/directory]: Create a tar archive
+
+tar -xvf archive.tar: Extract a tar archive
+
+zip [archive.zip] [file]: Create a zip archive
+
+unzip [archive.zip]: Extract a zip archive
+
+df -h: Display disk space usage
+
+du -sh [directory]: Display directory size
+
+top: Display running processes
+
+ps aux: List all running processes
+
+kill [pid]: Terminate a process by PID
+
+xargs: Construct argument lists and execute utility
