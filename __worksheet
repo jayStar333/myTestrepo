@@ -1,0 +1,58 @@
+```python
+def define_table_directly(args: argparse.Namespace):
+    """
+    Define a table directly with primary key information using Oracle metadata.
+    
+    :param args: Command line arguments containing schema and table information
+    :return: None
+    """
+    source_identifier = ".".join([args.schema, args.table])
+    query = f"SELECT * from {source_identifier}"
+    print(query)
+    
+    authenticator = OracleAuthentication(**asdict(GL_SOURCES[args.source_of_record]))
+    
+    try:
+        source_table = OracleTable(
+            query=query,
+            schema=args.schema,
+            table_name=args.table,
+            authenticator=authenticator
+        )
+        
+        # Query to get primary key columns for this table
+        pk_query = f"""
+            SELECT column_name
+            FROM all_cons_columns
+            WHERE constraint_name = (
+                SELECT constraint_name
+                FROM all_constraints
+                WHERE table_name = '{args.table}'
+                AND owner = '{args.schema}'
+                AND constraint_type = 'P'
+            )
+        """
+        # Execute PK query using the same connection
+        pk_columns = set(row[0] for row in source_table.connection.execute(pk_query))
+        
+    except AttributeError as error:
+        print(f"{error=}")
+        return
+
+    print("before getting view")
+    try:
+        source_table.get_view_definition_table(schema=source_identifier)
+    except Exception as error:
+        print(f"{error=}")
+        return
+
+    # Include PK information in the output
+    columns_info = []
+    for column in source_table.all_columns:
+        is_pk = "(PK)" if column.name in pk_columns else ""
+        columns_info.append(f"{column.name}{is_pk}")
+
+    print(f"table={source_identifier}|columns={len(source_table.all_columns)}|details={', '.join(columns_info)}")
+    print("after getting view")
+```
+###################################
