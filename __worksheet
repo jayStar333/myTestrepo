@@ -56,3 +56,136 @@ def define_table_directly(args: argparse.Namespace):
     print("after getting view")
 ```
 ###################################
+import os
+import csv
+import pandas as pd
+from datetime import datetime
+
+def process_csv_file(
+    input_file_path, 
+    output_directory, 
+    selected_fields, 
+    field_rename_mapping, 
+    additional_field_generators
+):
+    """
+    Process a CSV file by selecting specific fields, renaming them, 
+    and adding derived fields.
+    
+    Parameters:
+    - input_file_path (str): Full path to the input CSV file
+    - output_directory (str): Directory where the output file will be saved
+    - selected_fields (list): List of fields to extract from the original CSV
+    - field_rename_mapping (dict): Mapping of old field names to new field names
+    - additional_field_generators (list): List of functions to generate new fields
+    
+    Returns:
+    - str: Path to the created metadata CSV file
+    """
+    # Ensure the output directory exists
+    os.makedirs(output_directory, exist_ok=True)
+    
+    # Read the input CSV file
+    try:
+        df = pd.read_csv(input_file_path)
+    except Exception as e:
+        raise ValueError(f"Error reading input CSV file: {e}")
+    
+    # Validate and select specified fields
+    selected_df = df[selected_fields].copy()
+    
+    # Rename fields
+    selected_df.rename(columns=field_rename_mapping, inplace=True)
+    
+    # Generate additional fields
+    for field_generator in additional_field_generators:
+        field_name, generator_func = field_generator
+        selected_df[field_name] = selected_df.apply(generator_func, axis=1)
+    
+    # Create metadata filename with timestamp
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    metadata_filename = f"metadata_{timestamp}.csv"
+    metadata_filepath = os.path.join(output_directory, metadata_filename)
+    
+    # Write the processed data to CSV
+    selected_df.to_csv(metadata_filepath, index=False)
+    
+    return metadata_filepath
+
+# Example usage and demonstration
+def example_usage():
+    # Example input file path
+    input_file = 'sample_data.csv'
+    
+    # Output directory
+    output_dir = './processed_data'
+    
+    # Selected fields to extract
+    selected_fields = ['name', 'age', 'salary', 'department']
+    
+    # Field renaming mapping
+    field_rename_map = {
+        'name': 'full_name', 
+        'age': 'person_age', 
+        'salary': 'annual_income',
+        'department': 'work_unit'
+    }
+    
+    # Additional field generators
+    def calculate_tax_bracket(row):
+        """Calculate tax bracket based on income"""
+        salary = row['annual_income']
+        if salary < 30000:
+            return 'Low'
+        elif 30000 <= salary < 80000:
+            return 'Medium'
+        else:
+            return 'High'
+    
+    def generate_age_category(row):
+        """Categorize age"""
+        age = row['person_age']
+        if age < 25:
+            return 'Young'
+        elif 25 <= age < 45:
+            return 'Mid-Career'
+        else:
+            return 'Senior'
+    
+    def calculate_potential_bonus(row):
+        """Calculate potential bonus based on age and income"""
+        age_category = generate_age_category(row)
+        tax_bracket = calculate_tax_bracket(row)
+        
+        if age_category == 'Senior' and tax_bracket == 'High':
+            return row['annual_income'] * 0.15
+        elif age_category == 'Mid-Career' and tax_bracket == 'Medium':
+            return row['annual_income'] * 0.10
+        else:
+            return row['annual_income'] * 0.05
+    
+    def generate_employee_code(row):
+        """Generate a unique employee code"""
+        return f"{row['work_unit'][:3].upper()}-{row['person_age']}"
+    
+    # Additional field generator specification
+    additional_fields = [
+        ('tax_bracket', calculate_tax_bracket),
+        ('age_category', generate_age_category),
+        ('potential_bonus', calculate_potential_bonus),
+        ('employee_code', generate_employee_code)
+    ]
+    
+    # Process the CSV
+    output_file = process_csv_file(
+        input_file, 
+        output_dir, 
+        selected_fields, 
+        field_rename_map, 
+        additional_fields
+    )
+    
+    print(f"Processed CSV saved to: {output_file}")
+
+# Uncomment the line below to run the example
+# example_usage()
