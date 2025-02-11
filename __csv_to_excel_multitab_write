@@ -1,0 +1,280 @@
+################ 1 ################
+import pandas as pd
+from openpyxl import load_workbook
+import logging
+from typing import Dict, List, Optional
+import os
+from datetime import datetime
+
+class ExcelDataProcessor:
+    """
+    A class to process CSV data and update multiple Excel sheets.
+    """
+    def __init__(self, excel_template_path: str, log_directory: str = "logs"):
+        """
+        Initialize the Excel Data Processor.
+        
+        Args:
+            excel_template_path: Path to the Excel template file
+            log_directory: Directory for log files
+        """
+        self.excel_template_path = excel_template_path
+        self.setup_logging(log_directory)
+        
+    def setup_logging(self, log_directory: str) -> None:
+        """Set up logging configuration."""
+        if not os.path.exists(log_directory):
+            os.makedirs(log_directory)
+            
+        log_file = os.path.join(
+            log_directory,
+            f"excel_processor_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
+        )
+        
+        logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s - %(levelname)s - %(message)s',
+            handlers=[
+                logging.FileHandler(log_file),
+                logging.StreamHandler()
+            ]
+        )
+        
+    def read_csv_data(self, csv_path: str) -> Optional[pd.DataFrame]:
+        """
+        Read data from CSV file.
+        
+        Args:
+            csv_path: Path to the CSV file
+            
+        Returns:
+            DataFrame containing CSV data or None if error occurs
+        """
+        try:
+            logging.info(f"Reading CSV file: {csv_path}")
+            return pd.read_csv(csv_path)
+        except Exception as e:
+            logging.error(f"Error reading CSV file: {str(e)}")
+            return None
+            
+    def update_excel_sheets(
+        self,
+        data: pd.DataFrame,
+        sheet_mapping: Dict[str, Dict[str, str]],
+        output_path: str
+    ) -> bool:
+        """
+        Update multiple Excel sheets with CSV data.
+        
+        Args:
+            data: DataFrame containing the CSV data
+            sheet_mapping: Dictionary mapping sheet names to column mappings
+            output_path: Path where the updated Excel file should be saved
+            
+        Returns:
+            Boolean indicating success or failure
+        """
+        try:
+            # Load the Excel template
+            workbook = load_workbook(self.excel_template_path)
+            
+            # Process each sheet according to the mapping
+            for sheet_name, column_mapping in sheet_mapping.items():
+                if sheet_name not in workbook.sheetnames:
+                    logging.warning(f"Sheet {sheet_name} not found in template")
+                    continue
+                    
+                worksheet = workbook[sheet_name]
+                logging.info(f"Processing sheet: {sheet_name}")
+                
+                # Find the first empty row
+                first_empty_row = 1
+                while worksheet.cell(row=first_empty_row, column=1).value is not None:
+                    first_empty_row += 1
+                
+                # Write data to the sheet
+                for row_idx, row in data.iterrows():
+                    for excel_col, csv_col in column_mapping.items():
+                        try:
+                            cell_value = row[csv_col]
+                            worksheet[f"{excel_col}{first_empty_row + row_idx}"] = cell_value
+                        except KeyError:
+                            logging.error(f"Column {csv_col} not found in CSV data")
+                            continue
+                        except Exception as e:
+                            logging.error(f"Error writing to cell {excel_col}{first_empty_row + row_idx}: {str(e)}")
+                            continue
+            
+            # Save the updated workbook
+            workbook.save(output_path)
+            logging.info(f"Excel file successfully saved to: {output_path}")
+            return True
+            
+        except Exception as e:
+            logging.error(f"Error updating Excel file: {str(e)}")
+            return False
+            
+    def process_data(
+        self,
+        csv_path: str,
+        sheet_mapping: Dict[str, Dict[str, str]],
+        output_path: str
+    ) -> bool:
+        """
+        Main method to process CSV data and update Excel file.
+        
+        Args:
+            csv_path: Path to the CSV file
+            sheet_mapping: Dictionary mapping sheet names to column mappings
+            output_path: Path where the updated Excel file should be saved
+            
+        Returns:
+            Boolean indicating success or failure
+        """
+        # Read CSV data
+        data = self.read_csv_data(csv_path)
+        if data is None:
+            return False
+            
+        # Update Excel sheets
+        return self.update_excel_sheets(data, sheet_mapping, output_path)
+
+# Example usage
+if __name__ == "__main__":
+    # Example sheet mapping
+    SHEET_MAPPING = {
+        "Sheet1": {
+            "A": "name",
+            "B": "age",
+            "C": "email"
+        },
+        "Sheet2": {
+            "A": "department",
+            "B": "salary",
+            "C": "start_date"
+        }
+    }
+    
+    # Initialize processor
+    processor = ExcelDataProcessor("template.xlsx")
+    
+    # Process data
+    success = processor.process_data(
+        csv_path="input_data.csv",
+        sheet_mapping=SHEET_MAPPING,
+        output_path="updated_template.xlsx"
+    )
+    
+    if success:
+        logging.info("Data processing completed successfully")
+    else:
+        logging.error("Data processing failed")
+################ 2 ################
+import pandas as pd
+from openpyxl import load_workbook
+import os
+
+def append_csv_to_excel(csv_file, excel_file, sheet_mapping):
+    """
+    Reads a CSV file and appends data to an existing multi-tabbed Excel file 
+    based on the given column-to-sheet mapping.
+
+    :param csv_file: Path to the CSV input file.
+    :param excel_file: Path to the existing multi-tabbed Excel file.
+    :param sheet_mapping: Dictionary mapping CSV columns to corresponding Excel sheets.
+    """
+    # Read the CSV file
+    df = pd.read_csv(csv_file)
+
+    # Load the existing Excel file
+    if os.path.exists(excel_file):
+        book = load_workbook(excel_file)
+    else:
+        raise FileNotFoundError(f"Excel file '{excel_file}' not found.")
+
+    # Open Excel writer with the existing file
+    with pd.ExcelWriter(excel_file, engine='openpyxl', mode='a', if_sheet_exists='overlay') as writer:
+        for column_name, sheet_name in sheet_mapping.items():
+            if column_name not in df.columns:
+                print(f"Warning: Column '{column_name}' not found in CSV. Skipping...")
+                continue
+
+            if sheet_name not in book.sheetnames:
+                print(f"Warning: Sheet '{sheet_name}' not found in Excel. Skipping...")
+                continue
+            
+            # Read the specific column from CSV
+            data_to_append = df[[column_name]].dropna()
+
+            # Load existing sheet into DataFrame
+            existing_df = pd.read_excel(excel_file, sheet_name=sheet_name)
+            
+            # Append new data
+            updated_df = pd.concat([existing_df, data_to_append], ignore_index=True)
+            
+            # Write back to the same sheet
+            updated_df.to_excel(writer, sheet_name=sheet_name, index=False)
+
+    print("CSV data successfully appended to the Excel file.")
+
+# Example usage
+if __name__ == "__main__":
+    csv_file = "input_data.csv"
+    excel_file = "multi_tabbed.xlsx"
+
+    # Define mapping of CSV columns to Excel sheets
+    sheet_mapping = {
+        "Customer Name": "Customers",
+        "Order ID": "Orders",
+        "Product": "Inventory",
+        "Amount": "Sales"
+    }
+
+    append_csv_to_excel(csv_file, excel_file, sheet_mapping)
+
+Ex.
+from csv_to_excel import append_csv_to_excel
+
+csv_file = "new_data.csv"
+excel_file = "existing_report.xlsx"
+sheet_mapping = {
+    "Customer ID": "Customers",
+    "Order Date": "Orders",
+}
+
+append_csv_to_excel(csv_file, excel_file, sheet_mapping)
+
+################ 3 ################
+import pandas as pd
+from openpyxl import load_workbook
+
+def fill_excel_from_csv(csv_file, excel_file):
+    # Read the input CSV file
+    df = pd.read_csv(csv_file)
+
+    # Load the existing multi-tabbed Excel file
+    book = load_workbook(excel_file)
+
+    # Loop through each sheet in the workbook
+    for sheet_name in book.sheetnames:
+        # Get the corresponding DataFrame for the sheet
+        sheet_df = df[df['Sheet'] == sheet_name]  # Assuming 'Sheet' column contains sheet names
+
+        # Load the sheet
+        sheet = book[sheet_name]
+
+        # Fill the existing table in the sheet with data from the DataFrame
+        for index, row in sheet_df.iterrows():
+            for col_index, value in enumerate(row):
+                cell = sheet.cell(row=index + 2, column=col_index + 1)  # Adjusting for header
+                cell.value = value
+
+    # Save the updated Excel file
+    book.save(excel_file)
+
+# Example usage
+csv_file = 'input_data.csv'
+excel_file = 'existing_tables.xlsx'
+fill_excel_from_csv(csv_file, excel_file)
+
+
