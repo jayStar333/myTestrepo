@@ -190,3 +190,191 @@ def example_usage():
 # Uncomment the line below to run the example
 # example_usage()
 ###################################
+import os
+import csv
+import pandas as pd
+from datetime import datetime
+
+def get_hive_datatype(oracle_type):
+    """
+    Convert Oracle datatype to Hive equivalent
+    """
+    oracle_type = str(oracle_type).upper().strip()
+    
+    # Mapping of Oracle to Hive datatypes
+    datatype_mapping = {
+        'VARCHAR2': 'STRING',
+        'VARCHAR': 'STRING',
+        'CHAR': 'STRING',
+        'NCHAR': 'STRING',
+        'NVARCHAR2': 'STRING',
+        'CLOB': 'STRING',
+        'NCLOB': 'STRING',
+        'NUMBER': 'DECIMAL',
+        'NUMERIC': 'DECIMAL',
+        'DECIMAL': 'DECIMAL',
+        'INTEGER': 'INT',
+        'INT': 'INT',
+        'SMALLINT': 'SMALLINT',
+        'FLOAT': 'DOUBLE',
+        'REAL': 'DOUBLE',
+        'DOUBLE PRECISION': 'DOUBLE',
+        'DATE': 'TIMESTAMP',
+        'TIMESTAMP': 'TIMESTAMP',
+        'BLOB': 'BINARY',
+        'LONG': 'STRING',
+        'LONG RAW': 'BINARY',
+        'RAW': 'BINARY',
+        'BOOLEAN': 'BOOLEAN'
+    }
+    
+    # Handle NUMBER with precision and scale
+    if 'NUMBER' in oracle_type:
+        if '(' in oracle_type:
+            precision_scale = oracle_type.split('(')[1].rstrip(')').split(',')
+            if len(precision_scale) == 2:
+                precision, scale = map(int, precision_scale)
+                if scale == 0:
+                    if precision < 5:
+                        return 'SMALLINT'
+                    elif precision < 10:
+                        return 'INT'
+                    elif precision < 19:
+                        return 'BIGINT'
+                    else:
+                        return 'DECIMAL({},{})'.format(precision, scale)
+                else:
+                    return 'DECIMAL({},{})'.format(precision, scale)
+    
+    # Return mapped type or STRING as default
+    return datatype_mapping.get(oracle_type.split('(')[0], 'STRING')
+
+def process_csv_file(
+    input_file_path, 
+    output_directory, 
+    selected_fields,
+    field_rename_mapping,
+    dev_prefix_field,      # Field to add dev_ prefix
+    conf_prefix_field,     # Field to add conf_ prefix
+    pass_through_field,    # Field to pass through as-is
+    datatype_field        # Field containing Oracle datatype
+):
+    """
+    Process a CSV file by selecting specific fields, renaming them, 
+    and adding derived fields with specific prefixes and transformations.
+    
+    Parameters:
+    - input_file_path (str): Full path to the input CSV file
+    - output_directory (str): Directory where the output file will be saved
+    - selected_fields (list): List of fields to extract from the original CSV
+    - field_rename_mapping (dict): Mapping of old field names to new field names
+    - dev_prefix_field (str): Field to be prefixed with 'dev_'
+    - conf_prefix_field (str): Field to be prefixed with 'conf_'
+    - pass_through_field (str): Field to be passed through unchanged
+    - datatype_field (str): Field containing Oracle datatype to be converted to Hive
+    
+    Returns:
+    - str: Path to the created metadata CSV file
+    """
+    # Ensure the output directory exists
+    os.makedirs(output_directory, exist_ok=True)
+    
+    try:
+        # Read the input CSV file
+        df = pd.read_csv(input_file_path)
+        
+        # Validate and select specified fields
+        selected_df = df[selected_fields].copy()
+        
+        # Rename fields
+        selected_df.rename(columns=field_rename_mapping, inplace=True)
+        
+        # Add dev_ prefix column
+        if dev_prefix_field in selected_df.columns:
+            new_dev_field = f'dev_{dev_prefix_field}'
+            selected_df[new_dev_field] = 'dev_' + selected_df[dev_prefix_field].astype(str)
+        
+        # Add conf_ prefix column
+        if conf_prefix_field in selected_df.columns:
+            new_conf_field = f'conf_{conf_prefix_field}'
+            selected_df[new_conf_field] = 'conf_' + selected_df[conf_prefix_field].astype(str)
+        
+        # Add pass-through column
+        if pass_through_field in selected_df.columns:
+            new_pass_field = f'new_{pass_through_field}'
+            selected_df[new_pass_field] = selected_df[pass_through_field]
+        
+        # Add Hive datatype column
+        if datatype_field in selected_df.columns:
+            new_type_field = f'hive_{datatype_field}'
+            selected_df[new_type_field] = selected_df[datatype_field].apply(get_hive_datatype)
+        
+        # Create metadata filename with timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        metadata_filename = f"metadata_{timestamp}.csv"
+        metadata_filepath = os.path.join(output_directory, metadata_filename)
+        
+        # Write the processed data to CSV
+        selected_df.to_csv(metadata_filepath, index=False)
+        
+        return metadata_filepath
+        
+    except Exception as e:
+        raise ValueError(f"Error processing CSV file: {e}")
+
+# Example usage and demonstration
+def example_usage():
+    # Example input file path
+    input_file = 'sample_data.csv'
+    
+    # Output directory
+    output_dir = './processed_data'
+    
+    # Selected fields to extract
+    selected_fields = ['column_name', 'data_type', 'table_name', 'schema_name', 'column_id']
+    
+    # Field renaming mapping
+    field_rename_map = {
+        'column_name': 'col_name',
+        'data_type': 'oracle_type',
+        'table_name': 'tbl_name',
+        'schema_name': 'schema',
+        'column_id': 'col_id'
+    }
+    
+    # Process the CSV
+    output_file = process_csv_file(
+        input_file_path=input_file,
+        output_directory=output_dir,
+        selected_fields=selected_fields,
+        field_rename_mapping=field_rename_map,
+        dev_prefix_field='tbl_name',    # Will create 'dev_tbl_name'
+        conf_prefix_field='schema',      # Will create 'conf_schema'
+        pass_through_field='col_name',   # Will create 'new_col_name'
+        datatype_field='oracle_type'     # Will create 'hive_oracle_type'
+    )
+    
+    print(f"Processed CSV saved to: {output_file}")
+
+# Example of input CSV structure:
+"""
+column_name,data_type,table_name,schema_name,column_id
+id,NUMBER(10),customers,sales,1
+name,VARCHAR2(100),customers,sales,2
+email,VARCHAR2(255),customers,sales,3
+created_date,TIMESTAMP,customers,sales,4
+balance,NUMBER(10,2),customers,sales,5
+"""
+
+# Example of output CSV structure:
+"""
+col_name,oracle_type,tbl_name,schema,col_id,dev_tbl_name,conf_schema,new_col_name,hive_oracle_type
+id,NUMBER(10),customers,sales,1,dev_customers,conf_sales,id,INT
+name,VARCHAR2(100),customers,sales,2,dev_customers,conf_sales,name,STRING
+email,VARCHAR2(255),customers,sales,3,dev_customers,conf_sales,email,STRING
+created_date,TIMESTAMP,customers,sales,4,dev_customers,conf_sales,created_date,TIMESTAMP
+balance,NUMBER(10,2),customers,sales,5,dev_customers,conf_sales,balance,DECIMAL(10,2)
+"""
+
+# Uncomment the line below to run the example
+# example_usage()
