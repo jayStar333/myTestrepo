@@ -277,4 +277,62 @@ csv_file = 'input_data.csv'
 excel_file = 'existing_tables.xlsx'
 fill_excel_from_csv(csv_file, excel_file)
 
+################ 4 ################
+import pandas as pd
+from openpyxl import load_workbook
+
+# Function to read CSV and write to specific Excel sheets
+def update_excel_from_csv(csv_path, excel_path, sheet_mappings):
+    """
+    Updates an existing Excel file with data from a CSV file.
+
+    Args:
+        csv_path (str): Path to the input CSV file.
+        excel_path (str): Path to the existing Excel file.
+        sheet_mappings (dict): Mapping of CSV columns to Excel sheets and ranges.
+                               Format: {"SheetName": {"range": "A1", "columns": ["col1", "col2"]}}
+    """
+    # Load the CSV file into a DataFrame
+    csv_data = pd.read_csv(csv_path)
+    
+    # Load the existing Excel workbook
+    workbook = load_workbook(excel_path)
+    
+    for sheet_name, mapping in sheet_mappings.items():
+        if sheet_name not in workbook.sheetnames:
+            print(f"Sheet '{sheet_name}' not found in workbook. Skipping...")
+            continue
+        
+        # Select the sheet
+        sheet = workbook[sheet_name]
+        
+        # Get the specified columns from the CSV
+        data_to_write = csv_data[mapping["columns"]]
+        
+        # Write data starting at the specified range
+        start_cell = mapping["range"]
+        start_row = int(start_cell[1:])  # Extract row number from range (e.g., A1 -> 1)
+        start_col = ord(start_cell[0].upper()) - 65  # Convert column letter to index (e.g., A -> 0)
+        
+        for i, row in enumerate(data_to_write.values.tolist(), start=start_row):
+            for j, value in enumerate(row, start=start_col):
+                sheet.cell(row=i, column=j+1).value = value
+    
+    # Save changes to the workbook
+    workbook.save(excel_path)
+    print(f"Excel file '{excel_path}' updated successfully!")
+
+# Example usage
+csv_file = "input.csv"
+excel_file = "existing_workbook.xlsx"
+
+# Define mappings: Specify which columns go into which sheets and where
+mappings = {
+    "Sheet1": {"range": "A1", "columns": ["Column1", "Column2"]},
+    "Sheet2": {"range": "B2", "columns": ["Column3", "Column4"]}
+}
+
+update_excel_from_csv(csv_file, excel_file, mappings)
+
+
 
