@@ -594,3 +594,193 @@ balance,NUMBER(10,2),customers_prod,sales,5,dev_customers_conf,conf_sales,balanc
 
 # Uncomment the line below to run the example
 # example_usage()
+
+#############################################################
+from dataclasses import dataclass, field
+from datetime import datetime
+from typing import List, Optional
+
+@dataclass
+class OracleColumn(RelationalDBSourceColumn):
+    field_format: str = ""
+    field_length: str = ""
+    decimal_length: str = ""
+    field_precision: str = ""
+    column_id: int = 0
+    column_position: int = 0
+    column_name: str = ""
+    column_key: str = ""
+    schema_name: str = ""
+    table_name: str = ""
+    
+    # VARCHAR specific metadata
+    char_length: int = 0
+    char_used: str = "BYTE"  # BYTE or CHAR
+    byte_length: int = 0
+    max_length: int = 4000  # Oracle VARCHAR2 default max length
+    char_semantics: bool = False  # False for BYTE, True for CHAR semantics
+    
+    # Additional metadata
+    created_date: datetime = None
+    modified_date: datetime = None
+    created_by: str = ""
+    modified_by: str = ""
+    comments: str = ""
+    
+    def __post_init__(self):
+        self.field_name = self.field_name.upper()
+        self.column_name = self.column_name.upper() if self.column_name else self.field_name
+        self.schema_name = self.schema_name.upper() if self.schema_name else ""
+        
+        if not self.column_key:
+            self._generate_column_key()
+            
+        if self.field_type:
+            try:
+                self.field = oracle_field_factory.get_field()
+                if self._is_varchar_type():
+                    self._setup_varchar_metadata()
+            except TypeError as error:
+                raise TypeError(f"Field {self.field_type} not found in field type definitions.")
+    
+    def _is_varchar_type(self) -> bool:
+        """Check if the field type is VARCHAR or VARCHAR2"""
+        return self.field_type.upper() in ["VARCHAR", "VARCHAR2"]
+    
+    def _setup_varchar_metadata(self):
+        """Setup VARCHAR specific metadata"""
+        if self._is_varchar_type():
+            # Convert field_length to integer if it exists
+            if self.field_length:
+                length = int(self.field_length)
+                if self.char_semantics:
+                    self.char_length = length
+                    # Estimate byte length (assuming UTF-8 encoding)
+                    self.byte_length = length * 4
+                else:
+                    self.byte_length = length
+                    # Estimate char length (assuming UTF-8 encoding)
+                    self.char_length = length // 4
+                    
+                # Validate against maximum length
+                if self.byte_length > self.max_length:
+                    raise ValueError(f"VARCHAR length exceeds maximum allowed ({self.max_length} bytes)")
+    
+    def validate_varchar_constraints(self):
+        """Validate VARCHAR specific constraints"""
+        if self._is_varchar_type():
+            if not self.field_length:
+                raise ValueError("VARCHAR columns must specify a length")
+            
+            try:
+                length = int(self.field_length)
+                if length <= 0:
+                    raise ValueError("VARCHAR length must be positive")
+                if length > self.max_length:
+                    raise ValueError(f"VARCHAR length exceeds maximum allowed ({self.max_length})")
+            except ValueError as e:
+                raise ValueError(f"Invalid VARCHAR length: {self.field_length}")
+            
+            if self.char_used not in ["BYTE", "CHAR"]:
+                raise ValueError("char_used must be either 'BYTE' or 'CHAR'")
+    
+    def get_varchar_metadata(self) -> dict:
+        """Get VARCHAR specific metadata"""
+        if not self._is_varchar_type():
+            return {}
+            
+        return {
+            'char_length': self.char_length,
+            'byte_length': self.byte_length,
+            'char_used': self.char_used,
+            'char_semantics': self.char_semantics,
+            'max_length': self.max_length
+        }
+    
+    def get_ddl_definition(self) -> str:
+        """Generate DDL for the column"""
+        ddl_parts = [
+            self.field_name,
+            self.field_type
+        ]
+        
+        if self._is_varchar_type():
+            semantics = "CHAR" if self.char_semantics else "BYTE"
+            ddl_parts[1] += f"({self.field_length} {semantics})"
+        
+        return " ".join(ddl_parts)
+    
+    def estimate_storage_bytes(self) -> int:
+        """Estimate storage bytes required for VARCHAR column"""
+        if not self._is_varchar_type():
+            return 0
+            
+        # Basic estimation - actual storage might vary based on Oracle version and settings
+        overhead_bytes = 2  # Length bytes
+        if self.char_semantics:
+            return (self.char_length * 4) + overhead_bytes
+        return self.byte_length + overhead_bytes
+    
+    def set_char_semantics(self, use_char_semantics: bool):
+        """Set character semantics for VARCHAR column"""
+        if self._is_varchar_type():
+            self.char_semantics = use_char_semantics
+            self._setup_varchar_metadata()
+    
+    def calculate_max_chars(self, sample_text: str = None) -> int:
+        """Calculate maximum number of characters possible based on byte length"""
+        if not self._is_varchar_type():
+            return 0
+            
+        if self.char_semantics:
+            return self.char_length
+            
+        if sample_text:
+            # Calculate based on sample text encoding
+            avg_bytes_per_char = len(sample_text.encode('utf8')) / len(sample_text)
+            return int(self.byte_length / avg_bytes_per_char)
+        
+        # Conservative estimate (assuming UTF-8 encoding)
+        return self.byte_length // 4
+
+Usage example:
+# Create a VARCHAR column with BYTE semantics
+varchar_column = OracleColumn(
+    field_name="employee_name",
+    column_name="EMPLOYEE_NAME",
+    schema_name="HR",
+    table_name="EMPLOYEES",
+    field_type="VARCHAR2",
+    field_length="100",
+    char_semantics=False,  # Use BYTE semantics
+    comments="Employee full name"
+)
+
+# Create a VARCHAR column with CHAR semantics
+varchar_column_char = OracleColumn(
+    field_name="description",
+    column_name="DESCRIPTION",
+    schema_name="HR",
+    table_name="EMPLOYEES",
+    field_type="VARCHAR2",
+    field_length="1000",
+    char_semantics=True,  # Use CHAR semantics
+    comments="Employee description"
+)
+
+# Get VARCHAR metadata
+varchar_metadata = varchar_column.get_varchar_metadata()
+
+# Generate DDL
+ddl = varchar_column.get_ddl_definition()
+
+# Estimate storage requirements
+storage_bytes = varchar_column.estimate_storage_bytes()
+
+# Calculate maximum possible characters
+max_chars = varchar_column.calculate_max_chars()
+
+# Set character semantics
+varchar_column.set_char_semantics(True)
+
+
