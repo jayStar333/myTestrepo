@@ -859,5 +859,46 @@ def main():
 
 # Run the examples
 main()
+#############################################################
+Here's how you can use this code:
+
+1. Direct function call:
+```python
+# Simple usage
+result = process_column_definition('username', 'varchar(50)')
+print(result)
+```
+
+2. In a loop processing multiple columns:
+```python
+# Process multiple columns
+columns = [
+    ('name', 'varchar(40)'),
+    ('price', 'decimal(2,5)'),
+    ('age', 'int')
+]
+
+for column_name, data_type in columns:
+    result = process_column_definition(column_name, data_type)
+    print(result)
+```
+
+3. Within another function:
+```python
+def create_table_definition(table_name, columns):
+    table_def = {'table_name': table_name, 'columns': []}
+    
+    for column_name, data_type in columns:
+        column_info = process_column_definition(column_name, data_type)
+        table_def['columns'].append(column_info)
+    
+    return table_def
+```
+
+The key points about calling the function within another function:
+
+1. Make sure both functions are defined in the same scope or imported properly
+2. Pass the parameters exactly as expected by the parse_data_type function
+3. Handle the returned tuple appropriately in your wrapper function
 
 
