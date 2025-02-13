@@ -783,4 +783,81 @@ max_chars = varchar_column.calculate_max_chars()
 # Set character semantics
 varchar_column.set_char_semantics(True)
 
+#############################################################
+def parse_data_type(data_type_str):
+    """
+    Separates a data type string with length/precision into its components.
+    Returns parameters as individual values, not in a list.
+    
+    Args:
+        data_type_str (str): Input string like 'varchar(40)' or 'decimal(2,5)'
+    
+    Returns:
+        tuple: Contains data_type and individual parameters
+    """
+    paren_start = data_type_str.find('(')
+    
+    if paren_start == -1:
+        return (data_type_str.lower(),)
+    
+    base_type = data_type_str[:paren_start].lower()
+    params_str = data_type_str[paren_start + 1:-1]
+    parameters = [int(p.strip()) for p in params_str.split(',')]
+    
+    return (base_type, *parameters)
+
+def process_column_definition(column_name, data_type_str):
+    """
+    Process a database column definition using the parse_data_type function.
+    
+    Args:
+        column_name (str): Name of the column
+        data_type_str (str): Data type string (e.g., 'varchar(40)')
+    
+    Returns:
+        dict: Column information including name, type, and parameters
+    """
+    # Call parse_data_type function and handle its results
+    type_info = parse_data_type(data_type_str)
+    
+    # Initialize column info dictionary
+    column_info = {
+        'column_name': column_name,
+        'data_type': type_info[0]
+    }
+    
+    # Add parameters based on data type
+    if type_info[0] == 'varchar' or type_info[0] == 'char':
+        if len(type_info) > 1:
+            column_info['length'] = type_info[1]
+    
+    elif type_info[0] == 'decimal' or type_info[0] == 'numeric':
+        if len(type_info) > 2:
+            column_info['precision'] = type_info[1]
+            column_info['scale'] = type_info[2]
+    
+    return column_info
+
+# Example usage
+def main():
+    # Example 1: Processing a varchar column
+    varchar_result = process_column_definition('first_name', 'varchar(40)')
+    print("VARCHAR Column:")
+    print(varchar_result)
+    print()
+    
+    # Example 2: Processing a decimal column
+    decimal_result = process_column_definition('price', 'decimal(2,5)')
+    print("DECIMAL Column:")
+    print(decimal_result)
+    print()
+    
+    # Example 3: Processing a regular integer column
+    int_result = process_column_definition('age', 'int')
+    print("INTEGER Column:")
+    print(int_result)
+
+# Run the examples
+main()
+
 
