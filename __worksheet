@@ -900,5 +900,62 @@ The key points about calling the function within another function:
 1. Make sure both functions are defined in the same scope or imported properly
 2. Pass the parameters exactly as expected by the parse_data_type function
 3. Handle the returned tuple appropriately in your wrapper function
+###########################################################################
+from dataclasses import dataclass, field
+from typing import Optional, Any
+
+@dataclass
+class OracleColumn:
+    name: str
+    data_type: str
+    position: int  # Added position attribute
+    nullable: bool = True
+    default_value: Optional[Any] = None
+    precision: Optional[int] = None
+    scale: Optional[int] = None
+    length: Optional[int] = None
+    comments: Optional[str] = None
+    
+    def __post_init__(self):
+        # Validate position is non-negative
+        if self.position < 0:
+            raise ValueError("Column position must be non-negative")
+            
+        # Validate data type
+        self.data_type = self.data_type.upper()
+        valid_types = {'VARCHAR2', 'NUMBER', 'DATE', 'TIMESTAMP', 'CLOB', 'BLOB', 'CHAR'}
+        if self.data_type not in valid_types:
+            raise ValueError(f"Invalid data type. Must be one of: {', '.join(valid_types)}")
+            
+        # Set precision/scale for NUMBER type
+        if self.data_type == 'NUMBER':
+            if self.precision is None:
+                self.precision = 38  # Oracle default
+            if self.scale is None:
+                self.scale = 0
+                
+        # Set length for VARCHAR2/CHAR type
+        if self.data_type in ('VARCHAR2', 'CHAR') and self.length is None:
+            raise ValueError(f"Length must be specified for {self.data_type} type")
+
+    def get_ddl_definition(self) -> str:
+        """Generate the DDL column definition."""
+        ddl = [self.name, self.data_type]
+        
+        if self.data_type == 'NUMBER' and self.precision is not None:
+            if self.scale:
+                ddl.append(f"({self.precision},{self.scale})")
+            else:
+                ddl.append(f"({self.precision})")
+        elif self.data_type in ('VARCHAR2', 'CHAR'):
+            ddl.append(f"({self.length})")
+            
+        if not self.nullable:
+            ddl.append("NOT NULL")
+            
+        if self.default_value is not None:
+            ddl.append(f"DEFAULT {self.default_value}")
+            
+        return " ".join(ddl)
 
 
