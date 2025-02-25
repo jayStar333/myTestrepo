@@ -1,0 +1,110 @@
+name,age,city
+Alice,30,New York
+Bob,25,Los Angeles
+Charlie,35,Chicago
+
+##################################
+Read CSV use variables
+##################################
+import csv
+
+# Path to the CSV file
+csv_file = "data.csv"
+
+# Open the CSV file
+with open(csv_file, mode="r") as file:
+    # Create a CSV reader object
+    reader = csv.DictReader(file)
+
+    # Iterate over each row in the CSV file
+    for row in reader:
+        # Extract fields and assign them to variables
+        name = row["name"]
+        age = int(row["age"])  # Convert age to an integer
+        city = row["city"]
+
+        # Use the variables in your code
+        print(f"Name: {name}, Age: {age}, City: {city}")
+
+##################################
+Multiple rows
+##################################
+import csv
+
+csv_file = "data.csv"
+people = []  # List to store all rows
+
+with open(csv_file, mode="r") as file:
+    reader = csv.DictReader(file)
+    for row in reader:
+        # Append each row as a dictionary to the list
+        people.append(row)
+
+# Use the list of people
+for person in people:
+    print(f"Name: {person['name']}, Age: {person['age']}, City: {person['city']}")
+
+####################################
+With error handling:
+
+import csv
+
+# Path to the CSV file
+csv_file = "data.csv"
+
+try:
+    # Open the CSV file
+    with open(csv_file, mode="r") as file:
+        # Create a CSV reader object
+        reader = csv.DictReader(file)
+
+        # Iterate over each row in the CSV file
+        for row in reader:
+            try:
+                # Extract fields and assign them to variables
+                name = row["name"]
+                age = int(row["age"])  # Convert age to an integer
+                city = row["city"]
+
+                # Use the variables in your code
+                print(f"Name: {name}, Age: {age}, City: {city}")
+            except KeyError as e:
+                print(f"Error: Missing expected column in CSV file - {e}")
+            except ValueError as e:
+                print(f"Error: Invalid data type in CSV file - {e}")
+except FileNotFoundError:
+    print(f"Error: The file '{csv_file}' was not found.")
+except Exception as e:
+    print(f"An unexpected error occurred: {e}")
+
+####################################
+
+import csv
+
+csv_file = "data.csv"
+people = []  # List to store all rows
+
+try:
+    # Open the CSV file
+    with open(csv_file, mode="r") as file:
+        reader = csv.DictReader(file)
+        for row in reader:
+            try:
+                # Append each row as a dictionary to the list
+                people.append({
+                    "name": row["name"],
+                    "age": int(row["age"]),  # Convert age to an integer
+                    "city": row["city"]
+                })
+            except KeyError as e:
+                print(f"Error: Missing expected column in CSV file - {e}")
+            except ValueError as e:
+                print(f"Error: Invalid data type in CSV file - {e}")
+except FileNotFoundError:
+    print(f"Error: The file '{csv_file}' was not found.")
+except Exception as e:
+    print(f"An unexpected error occurred: {e}")
+
+# Use the list of people
+for person in people:
+    print(f"Name: {person['name']}, Age: {person['age']}, City: {person['city']}")
