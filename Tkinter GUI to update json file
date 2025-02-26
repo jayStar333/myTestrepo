@@ -1,0 +1,71 @@
+import json
+import tkinter as tk
+from tkinter import messagebox
+import os
+
+# JSON file path
+JSON_FILE = "data.json"
+
+# Load existing data if available
+def load_json():
+    if os.path.exists(JSON_FILE):
+        with open(JSON_FILE, "r") as f:
+            try:
+                return json.load(f)  # Load existing JSON data
+            except json.JSONDecodeError:
+                return {}  # Return empty if file is corrupt
+    return {}  # Return empty if file doesn't exist
+
+# Save updates to JSON file
+def save_and_update():
+    existing_data = load_json()  # Load current data
+
+    # Get user input
+    name = name_entry.get().strip()
+    age = age_entry.get().strip()
+    email = email_entry.get().strip()
+
+    # Update only fields that are not empty
+    if name:
+        existing_data["name"] = name
+    if age:
+        try:
+            existing_data["age"] = int(age)  # Ensure age is an integer
+        except ValueError:
+            messagebox.showerror("Error", "Age must be a number")
+            return
+    if email:
+        existing_data["email"] = email
+
+    # Save updated JSON back to file
+    with open(JSON_FILE, "w") as f:
+        json.dump(existing_data, f, indent=4)
+
+    messagebox.showinfo("Success", "Data updated successfully!")
+
+# GUI Setup
+root = tk.Tk()
+root.title("Update JSON Data")
+
+# Load existing data into fields
+data = load_json()
+
+tk.Label(root, text="Name:").grid(row=0, column=0)
+name_entry = tk.Entry(root)
+name_entry.grid(row=0, column=1)
+name_entry.insert(0, data.get("name", ""))  # Prefill with existing data
+
+tk.Label(root, text="Age:").grid(row=1, column=0)
+age_entry = tk.Entry(root)
+age_entry.grid(row=1, column=1)
+age_entry.insert(0, str(data.get("age", "")))  # Prefill
+
+tk.Label(root, text="Email:").grid(row=2, column=0)
+email_entry = tk.Entry(root)
+email_entry.grid(row=2, column=1)
+email_entry.insert(0, data.get("email", ""))  # Prefill
+
+submit_button = tk.Button(root, text="Update JSON", command=save_and_update)
+submit_button.grid(row=3, column=0, columnspan=2)
+
+root.mainloop()
