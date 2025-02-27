@@ -137,3 +137,91 @@ def create_gui():
     submit_button.grid(row=3, column=0, columnspan=2)
 
     root.mainloop()
+
+##################################
+#This solution also updates subkeys
+
+import tkinter as tk
+from tkinter import ttk
+import json
+import os
+
+# Path to the existing JSON file
+JSON_FILE = "data.json"
+
+# Load existing JSON data from the file
+def load_json_data():
+    if os.path.exists(JSON_FILE):
+        with open(JSON_FILE, "r") as file:
+            return json.load(file)
+    else:
+        # Default data if the file doesn't exist
+        return {
+            "key1": "",
+            "key2": {
+                "nested_key1": "",
+                "nested_key2": ""
+            },
+            "key3": ""
+        }
+
+# Function to save the updated JSON data
+def save_data():
+    # Update the JSON data with the entered values
+    data["key1"] = key1_entry.get()
+    data["key2"]["nested_key1"] = nested_key1_entry.get()
+    data["key2"]["nested_key2"] = nested_key2_entry.get()
+    data["key3"] = key3_entry.get()
+    
+    # Save the updated data back to the JSON file
+    with open(JSON_FILE, "w") as file:
+        json.dump(data, file, indent=4)
+    
+    # Close the Tkinter window and proceed with the rest of the script
+    root.destroy()
+
+# Load existing JSON data
+data = load_json_data()
+
+# Create the Tkinter window
+root = tk.Tk()
+root.title("Update JSON Data Dynamically")
+
+# Input field for key1
+key1_label = ttk.Label(root, text="Enter value for key1:")
+key1_label.grid(row=0, column=0, padx=10, pady=10)
+key1_entry = ttk.Entry(root)
+key1_entry.insert(0, data["key1"])  # Pre-fill with existing value
+key1_entry.grid(row=0, column=1, padx=10, pady=10)
+
+# Input field for nested_key1
+nested_key1_label = ttk.Label(root, text="Enter value for nested_key1:")
+nested_key1_label.grid(row=1, column=0, padx=10, pady=10)
+nested_key1_entry = ttk.Entry(root)
+nested_key1_entry.insert(0, data["key2"]["nested_key1"])  # Pre-fill with existing value
+nested_key1_entry.grid(row=1, column=1, padx=10, pady=10)
+
+# Input field for nested_key2
+nested_key2_label = ttk.Label(root, text="Enter value for nested_key2:")
+nested_key2_label.grid(row=2, column=0, padx=10, pady=10)
+nested_key2_entry = ttk.Entry(root)
+nested_key2_entry.insert(0, data["key2"]["nested_key2"])  # Pre-fill with existing value
+nested_key2_entry.grid(row=2, column=1, padx=10, pady=10)
+
+# Input field for key3
+key3_label = ttk.Label(root, text="Enter value for key3:")
+key3_label.grid(row=3, column=0, padx=10, pady=10)
+key3_entry = ttk.Entry(root)
+key3_entry.insert(0, data["key3"])  # Pre-fill with existing value
+key3_entry.grid(row=3, column=1, padx=10, pady=10)
+
+# Save button
+save_button = ttk.Button(root, text="Save and Continue", command=save_data)
+save_button.grid(row=4, column=0, columnspan=2, pady=10)
+
+# Run the Tkinter event loop
+root.mainloop()
+
+# The rest of the script continues here after the Tkinter window is closed
+print("Updated JSON data saved. Continuing with the rest of the script...")
+print(data)
