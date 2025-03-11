@@ -1,0 +1,76 @@
+import re
+
+def parse_ddl(ddl_content):
+    """
+    Parse the DDL content to extract column names and their data types.
+    """
+    column_types = {}
+    # Regex to match column definitions
+    column_pattern = re.compile(r'(\w+)\s+(\w+)')
+
+    for line in ddl_content.splitlines():
+        match = column_pattern.search(line)
+        if match:
+            column_name = match.group(1)
+            column_type = match.group(2)
+            column_types[column_name] = column_type
+    return column_types
+
+def update_query_with_casts(sql_query, column_types):
+    """
+    Update the SQL query by adding CAST logic for each column.
+    """
+    # Split the query into parts
+    select_part = sql_query.split('FROM')[0].strip()
+    from_part = sql_query.split('FROM')[1].strip()
+
+    # Extract column names
+    columns = [col.strip() for col in select_part.replace('SELECT', '').split(',')]
+
+    # Build the new SELECT clause with CASTs
+    new_select_clause = []
+    for col in columns:
+        if col in column_types:
+            col_type = column_types[col]
+            # Map SQL data types to CAST types
+            if col_type.lower() in ['varchar', 'char', 'text']:
+                cast_type = 'STRING'
+            elif col_type.lower() in ['int', 'integer', 'smallint', 'bigint']:
+                cast_type = 'INT'
+            elif col_type.lower() in ['date']:
+                cast_type = 'DATE'
+            elif col_type.lower() in ['timestamp', 'datetime']:
+                cast_type = 'TIMESTAMP'
+            elif col_type.lower() in ['float', 'double', 'decimal']:
+                cast_type = 'DOUBLE'
+            else:
+                cast_type = 'STRING'  # Default to STRING if type is unknown
+            new_select_clause.append(f'CAST({col} AS {cast_type}) AS {col}')
+        else:
+            new_select_clause.append(col)  # If column type is not found, leave it as is
+
+    # Reconstruct the query
+    new_query = f"SELECT {', '.join(new_select_clause)} FROM {from_part}"
+    return new_query
+
+def main(ddl_file_path, sql_query):
+    """
+    Main function to read the DDL file, parse it, and update the SQL query.
+    """
+    with open(ddl_file_path, 'r') as file:
+        ddl_content = file.read()
+
+    # Parse the DDL to get column types
+    column_types = parse_ddl(ddl_content)
+
+    # Update the SQL query with CAST logic
+    updated_query = update_query_with_casts(sql_query, column_types)
+
+    return updated_query
+
+# Example usage
+ddl_file_path = 'table_definition.ddl'
+sql_query = 'SELECT name, age, date FROM my_table'
+
+updated_query = main(ddl_file_path, sql_query)
+print(updated_query)
