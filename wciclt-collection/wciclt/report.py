@@ -4,6 +4,7 @@ from pathlib import Path
 
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+from openpyxl.styles.colors import Color
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.worksheet import Worksheet
 
@@ -11,17 +12,23 @@ from .models import ATTENDANCE_ROWS, CURRENCY_FORMAT, Service, WeekPlan
 
 THIN = Side(style="thin", color="000000")
 BOX = Border(left=THIN, right=THIN, top=THIN, bottom=THIN)
+# ARGB (FF prefix). A 6-digit RGB becomes 00xxxxxx in openpyxl and is invisible.
 YELLOW = PatternFill("solid", fgColor="FFFFFF00")
-COLLECTION_FILL = PatternFill("solid", fgColor="C6EFCE")
-SPACER_FILL = PatternFill("solid", fgColor="1F4E79")
-TITLE_FONT = Font(name="Calibri", size=24, bold=True)
-HEAD_FONT = Font(name="Calibri", size=18, bold=True)
-SECTION_FONT = Font(name="Calibri", size=11, bold=True)
-BODY_FONT = Font(name="Calibri", size=11)
-TOTAL_ATT_FONT = Font(name="Calibri", size=14, bold=True)
-TOTAL_COL_FONT = Font(name="Calibri", size=18, bold=True)
-AMOUNT_FONT = Font(name="Cambria", size=14)
-VERT_FONT = Font(name="Calibri", size=26, bold=True, color="FFFFFF")
+COLLECTION_FILL = PatternFill("solid", fgColor="FFC6EFCE")
+# Source spacer: theme-3 (or 7) light tint + theme-1 (black) sideways text.
+SPACER_FILLS = (
+    PatternFill(fill_type="solid", fgColor=Color(theme=3, tint=0.5999938962981048)),
+    PatternFill(fill_type="solid", fgColor=Color(theme=7, tint=0.5999938962981048)),
+)
+THEME_DARK = Color(theme=1)
+TITLE_FONT = Font(name="Calibri", size=24, bold=True, color=THEME_DARK)
+HEAD_FONT = Font(name="Calibri", size=18, bold=True, color=THEME_DARK)
+SECTION_FONT = Font(name="Calibri", size=11, bold=True, color=THEME_DARK)
+BODY_FONT = Font(name="Calibri", size=11, color=THEME_DARK)
+TOTAL_ATT_FONT = Font(name="Calibri", size=14, bold=True, color=THEME_DARK)
+TOTAL_COL_FONT = Font(name="Calibri", size=18, bold=True, color=THEME_DARK)
+AMOUNT_FONT = Font(name="Cambria", size=14, color=THEME_DARK)
+VERT_FONT = Font(name="Calibri", size=26, bold=True, color=THEME_DARK)
 
 
 def _style_range(ws: Worksheet, row: int, col: int, font=None, fill=None, border=True, align=None, fmt=None):
@@ -55,11 +62,12 @@ def write_service_block(
     ws.column_dimensions[get_column_letter(value_col)].width = 22.0
     ws.column_dimensions[get_column_letter(spacer_col)].width = 6.3
 
+    service_name = service.display_label()
     ws.cell(4, label_col, service.report_date_label())
-    ws.cell(4, value_col, service.display_label())
+    ws.cell(4, value_col, service_name)
     _style_range(ws, 4, label_col, HEAD_FONT, align=Alignment(vertical="center", wrap_text=True))
     _style_range(ws, 4, value_col, HEAD_FONT, align=Alignment(vertical="center", wrap_text=True))
-    ws.row_dimensions[4].height = 48
+    ws.row_dimensions[4].height = 117.0
 
     ws.cell(5, label_col, "Recorded By:")
     ws.cell(5, value_col, service.recorded_by or "")
@@ -114,9 +122,9 @@ def write_service_block(
     _style_range(ws, total_row, value_col, TOTAL_COL_FONT, fmt=CURRENCY_FORMAT)
 
     ws.merge_cells(start_row=4, start_column=spacer_col, end_row=total_row, end_column=spacer_col)
-    spacer = ws.cell(4, spacer_col, service.display_label())
+    spacer = ws.cell(4, spacer_col, service_name)
     spacer.font = VERT_FONT
-    spacer.fill = SPACER_FILL
+    spacer.fill = SPACER_FILLS[index % len(SPACER_FILLS)]
     spacer.alignment = Alignment(textRotation=90, horizontal="center", vertical="center", wrap_text=True)
     spacer.border = BOX
     return last_row
@@ -135,9 +143,9 @@ def build_weekly_report(
     assert ws is not None
     ws.title = plan.report_sheet_name()
 
-    ws.row_dimensions[1].height = 12
-    ws.row_dimensions[2].height = 36
-    ws.row_dimensions[3].height = 8
+    ws.row_dimensions[1].height = 15.75
+    ws.row_dimensions[2].height = 42.75
+    ws.row_dimensions[3].height = 6.75
 
     last_col = max(3, len(plan.services) * 3)
     ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=last_col)

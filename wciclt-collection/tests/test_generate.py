@@ -68,6 +68,15 @@ def test_generate_two_service_week(tmp_paths):
     assert ws["B12"].value == "=SUM(B7:B9)"
     assert ws["A15"].value == "Offering"
     assert ws["D15"].value == "=A15"
+    assert ws["B4"].value == "Midweek Service"
+    assert ws["C4"].value == "Midweek Service"
+    assert ws["E4"].value == "Sunday Service"
+    assert ws["F4"].value == "Sunday Service"
+    assert ws.row_dimensions[4].height == 117.0
+    spacer_color = ws["C4"].font.color
+    assert spacer_color is not None and spacer_color.theme == 1
+    fill_rgb = getattr(ws["C4"].fill.fgColor, "rgb", None)
+    assert fill_rgb is None or not str(fill_rgb).startswith("00")
     last_cat = 14 + len(result.categories)
     assert ws.cell(last_cat + 1, 1).value == "TOTAL"
     assert "SUM(B15:" in str(ws.cell(last_cat + 1, 2).value)
@@ -201,3 +210,15 @@ def test_report_pulls_analysis_amounts(tmp_paths):
     assert ws["E15"].value == 385
     assert ws["E16"].value == 1843.68
     report.close()
+
+
+def test_report_other_service_name_uses_details(tmp_paths):
+    analysis, output = tmp_paths
+    plan = WeekPlan(
+        week_end=date(2026, 9, 27),
+        services=[Service(date(2026, 9, 24), ServiceType.OTHER, details="Youth Night")],
+    )
+    result = generate_week(plan, analysis, output)
+    ws = load_workbook(result.report_path).active
+    assert ws["B4"].value == "Youth Night"
+    assert ws["C4"].value == "Youth Night"
