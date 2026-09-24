@@ -98,6 +98,9 @@ ATTENDANCE_ROWS = [
 
 def service_type_from_value(value: str) -> ServiceType:
     key = (value or "").strip()
+    folded = key.casefold()
+    if "communion" in folded:
+        return ServiceType.MIDWEEK
     for item in ServiceType:
         if item.value == key or SERVICE_DROPDOWN[item] == key or SERVICE_SHORT_LABEL[item] == key:
             return item

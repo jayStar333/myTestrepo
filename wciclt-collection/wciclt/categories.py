@@ -13,15 +13,28 @@ from .models import ANALYSIS_NON_CATEGORY, CATEGORIES_SHEET, DEFAULT_CATEGORIES
 from .paths import DEFAULT_CATEGORIES_JSON, ensure_data_dir
 
 
+THANKSGIVING_NAME = "End of Month Thanks-Giving"
+
+
 def _norm(name: str) -> str:
     return re.sub(r"\s+", " ", (name or "").strip())
+
+
+def canonicalize_category(name: str) -> str:
+    text = _norm(name)
+    key = text.casefold()
+    if "thanks" in key and "giving" in key.replace("-", " "):
+        return THANKSGIVING_NAME
+    if key in {"thanks-giving", "thanksgiving", "thanksgiving april"}:
+        return THANKSGIVING_NAME
+    return text
 
 
 def normalize_list(names: list[str]) -> list[str]:
     seen: set[str] = set()
     out: list[str] = []
     for raw in names:
-        name = _norm(raw)
+        name = canonicalize_category(raw)
         if not name:
             continue
         key = name.casefold()

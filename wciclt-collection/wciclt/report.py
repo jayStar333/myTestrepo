@@ -44,6 +44,7 @@ def write_service_block(
     index: int,
     categories: list[str],
     first_label_col: int,
+    amounts: list[float] | None = None,
 ) -> int:
     label_col = 1 + index * 3
     value_col = label_col + 1
@@ -93,13 +94,15 @@ def write_service_block(
         ws.cell(14, label_col, f"={get_column_letter(first_label_col)}14")
 
     first_cat = 15
+    pulled = amounts or [0.0] * len(categories)
     for i, name in enumerate(categories):
         row = first_cat + i
         if index == 0:
             ws.cell(row, label_col, name)
         else:
             ws.cell(row, label_col, f"={get_column_letter(first_label_col)}{row}")
-        ws.cell(row, value_col, 0)
+        value = pulled[i] if i < len(pulled) else 0
+        ws.cell(row, value_col, value)
         _style_range(ws, row, label_col, BODY_FONT, align=Alignment(vertical="top"))
         _style_range(ws, row, value_col, AMOUNT_FONT, fmt=CURRENCY_FORMAT)
 
@@ -119,7 +122,12 @@ def write_service_block(
     return last_row
 
 
-def build_weekly_report(plan: WeekPlan, categories: list[str], dest: Path) -> Path:
+def build_weekly_report(
+    plan: WeekPlan,
+    categories: list[str],
+    dest: Path,
+    amounts_by_service: list[list[float]] | None = None,
+) -> Path:
     plan.validate()
     dest.parent.mkdir(parents=True, exist_ok=True)
     wb = Workbook()
@@ -140,7 +148,8 @@ def build_weekly_report(plan: WeekPlan, categories: list[str], dest: Path) -> Pa
     first_label_col = 1
     last_row = 26
     for index, service in enumerate(plan.services):
-        last_row = write_service_block(ws, service, index, categories, first_label_col)
+        pulled = amounts_by_service[index] if amounts_by_service and index < len(amounts_by_service) else None
+        last_row = write_service_block(ws, service, index, categories, first_label_col, pulled)
 
     ws.page_setup.orientation = "landscape"
     ws.page_setup.fitToPage = True

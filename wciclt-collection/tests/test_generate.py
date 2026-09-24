@@ -6,8 +6,9 @@ from pathlib import Path
 import pytest
 from openpyxl import load_workbook
 
+from wciclt.categories import normalize_list
 from wciclt.generate import discover_categories, generate_week, sync_categories_across
-from wciclt.models import Service, ServiceType, WeekPlan
+from wciclt.models import Service, ServiceType, WeekPlan, service_type_from_value
 
 
 @pytest.fixture
@@ -137,3 +138,66 @@ def test_cdot_and_shiloh_labels(tmp_paths):
     assert wb["Mon-12.14.2026"]["C2"].value == "12/14/2026 - CDOT"
     wb.close()
     assert result.report_path.exists()
+
+
+def test_communion_is_midweek():
+    assert service_type_from_value("MIDWEEK COMMUNION SVC") == ServiceType.MIDWEEK
+    assert service_type_from_value("Communion") == ServiceType.MIDWEEK
+
+
+def test_thanksgiving_is_one_shared_name():
+    names = normalize_list(
+        ["July End of Month Thanks-Giving", "Thanksgiving April", "Offering", "End of Month Thanks-Giving"]
+    )
+    assert names.count("End of Month Thanks-Giving") == 1
+    assert "July End of Month Thanks-Giving" not in names
+
+
+def test_same_date_gets_dash_suffix_and_never_overwrites(tmp_paths):
+    analysis, output = tmp_paths
+    plan = WeekPlan(
+        week_end=date(2026, 4, 5),
+        services=[
+            Service(date(2026, 4, 3), ServiceType.SHILOH_HOUR),
+            Service(date(2026, 4, 3), ServiceType.SHILOH_ENCOUNTER),
+        ],
+    )
+    first = generate_week(plan, analysis, output)
+    assert first.tabs == ["Fri-04.03.2026", "Fri-04.03.2026 -2"]
+    wb = load_workbook(analysis)
+    wb["Fri-04.03.2026"]["C2"] = "04/03/2026 - Shiloh Hour Of Visitation"
+    wb["Fri-04.03.2026"]["G35"] = 111
+    wb.save(analysis)
+    wb.close()
+
+    second = generate_week(plan, analysis, output)
+    assert second.tabs == ["Fri-04.03.2026", "Fri-04.03.2026 -2"]
+    wb = load_workbook(analysis)
+    assert [n for n in wb.sheetnames if n.startswith("Fri-04.03.2026")] == [
+        "Fri-04.03.2026",
+        "Fri-04.03.2026 -2",
+    ]
+    assert wb["Fri-04.03.2026"]["G35"].value == 111
+    wb.close()
+
+
+def test_report_pulls_analysis_amounts(tmp_paths):
+    analysis, output = tmp_paths
+    plan = _week_two_services()
+    generate_week(plan, analysis, output, write_report=False)
+    wb = load_workbook(analysis)
+    sun = wb["Sun-09.27.2026"]
+    sun["G35"] = 385
+    sun["G36"] = 1843.68
+    wed = wb["Wed-09.23.2026"]
+    wed["G35"] = 28
+    wb.save(analysis)
+    wb.close()
+
+    result = generate_week(plan, analysis, output, write_analysis=False)
+    report = load_workbook(result.report_path)
+    ws = report.active
+    assert ws["B15"].value == 28
+    assert ws["E15"].value == 385
+    assert ws["E16"].value == 1843.68
+    report.close()

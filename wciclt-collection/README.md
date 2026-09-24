@@ -52,7 +52,9 @@ python -m wciclt sync-categories \
   --remove "Chairs"
 ```
 
-Point `--analysis` at your live `2026-Collection Analysis.xlsx` to append tabs. New files are created from `templates/analysis_tab_template.xlsx` (blanked copy of `Sun-09.20.2026`).
+Point `--analysis` at your live `2026-Collection Analysis.xlsx`. Matching tabs (`C2` already set for that service) are reused and never overwritten. A second service on the same date becomes `Fri-04.03.2026 -2`. New files start from `templates/analysis_tab_template.xlsx` (blanked copy of `Sun-09.20.2026`).
+
+After you enter category amounts on the Analysis tabs, run generate again (or **Report only**) to pull column `G` into the weekly report. Review that file and attach it to email — the app does not send mail. Communion midweeks use `midweek`. Thanksgiving is always `End of Month Thanks-Giving`.
 
 ## Tests
 

@@ -8,7 +8,7 @@ from openpyxl.utils import get_column_letter
 from openpyxl.workbook.workbook import Workbook
 from openpyxl.worksheet.worksheet import Worksheet
 
-from .categories import infer_from_analysis_sheet, write_categories_sheet
+from .categories import canonicalize_category, infer_from_analysis_sheet, write_categories_sheet
 from .models import ANALYSIS_ORG, DEFAULT_PREPARED_BY, Service
 from .paths import ANALYSIS_TEMPLATE
 
@@ -141,11 +141,58 @@ def _unique_tab_name(wb: Workbook, base: str) -> str:
     name = base[:31]
     if name not in wb.sheetnames:
         return name
-    for i in range(2, 20):
-        candidate = f"{base[:27]} -{i}"
+    for i in range(2, 100):
+        suffix = f" -{i}"
+        candidate = f"{base[: 31 - len(suffix)]}{suffix}"
         if candidate not in wb.sheetnames:
             return candidate
     raise ValueError(f"Could not allocate a unique tab name for {base}")
+
+
+def find_matching_tab(wb: Workbook, service: Service, used: set[str] | None = None) -> str | None:
+    used = used or set()
+    want_c2 = service.analysis_c2().casefold()
+    for name in wb.sheetnames:
+        if name.startswith("_") or name in used:
+            continue
+        c2 = wb[name]["C2"].value
+        if c2 and str(c2).strip().casefold() == want_c2:
+            return name
+    return None
+
+
+def coerce_amount(ws: Worksheet, row: int) -> float:
+    raw = ws.cell(row, 7).value
+    if isinstance(raw, (int, float)) and not isinstance(raw, bool):
+        return float(raw)
+    if isinstance(raw, str) and raw.startswith("="):
+        total = 0.0
+        found = False
+        for col in (4, 5, 6):
+            value = ws.cell(row, col).value
+            if isinstance(value, (int, float)) and not isinstance(value, bool):
+                total += float(value)
+                found = True
+        if found:
+            return total
+    return 0.0
+
+
+def read_category_amounts(ws: Worksheet) -> dict[str, float]:
+    start, total_row = _category_bounds(ws)
+    amounts: dict[str, float] = {}
+    for row in range(start, total_row):
+        name = ws.cell(row, 2).value
+        if not name:
+            continue
+        key = canonicalize_category(str(name)).casefold()
+        amounts[key] = coerce_amount(ws, row)
+    return amounts
+
+
+def amounts_for_categories(ws: Worksheet, categories: list[str]) -> list[float]:
+    found = read_category_amounts(ws)
+    return [found.get(canonicalize_category(name).casefold(), 0.0) for name in categories]
 
 
 def add_service_tab(wb: Workbook, service: Service, categories: list[str]) -> str:
@@ -164,6 +211,21 @@ def add_service_tab(wb: Workbook, service: Service, categories: list[str]) -> st
         label = ws.cell(row, 2).value
         if label and "PREPARED" in str(label).upper() and not ws.cell(row, 3).value:
             ws.cell(row, 3).value = DEFAULT_PREPARED_BY
+    return tab
+
+
+def reuse_or_add_tab(
+    wb: Workbook,
+    service: Service,
+    categories: list[str],
+    used: set[str],
+) -> str:
+    existing = find_matching_tab(wb, service, used)
+    if existing:
+        used.add(existing)
+        return existing
+    tab = add_service_tab(wb, service, categories)
+    used.add(tab)
     return tab
 
 

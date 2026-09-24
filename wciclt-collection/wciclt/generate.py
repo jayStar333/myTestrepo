@@ -5,7 +5,13 @@ from pathlib import Path
 
 from openpyxl import load_workbook
 
-from .analysis import add_service_tab, apply_categories_to_sheet, create_or_open_analysis
+from .analysis import (
+    amounts_for_categories,
+    apply_categories_to_sheet,
+    create_or_open_analysis,
+    find_matching_tab,
+    reuse_or_add_tab,
+)
 from .categories import (
     infer_from_analysis_workbook,
     infer_from_report_workbook,
@@ -88,27 +94,45 @@ def generate_week(
     cats = categories or discover_categories(analysis_path)
     save_json_categories(cats, json_path or DEFAULT_CATEGORIES_JSON)
     tabs: list[str] = []
+    amounts_by_service: list[list[float]] = []
     report_path = None
 
-    if write_analysis:
-        analysis_path.parent.mkdir(parents=True, exist_ok=True)
-        wb = create_or_open_analysis(analysis_path)
+    need_workbook = write_analysis or (write_report and analysis_path.exists())
+    wb = None
+    if need_workbook:
+        if write_analysis:
+            analysis_path.parent.mkdir(parents=True, exist_ok=True)
+        wb = create_or_open_analysis(analysis_path) if write_analysis else load_workbook(analysis_path)
         try:
-            write_categories_sheet(wb, cats)
-            if sync_existing_tabs:
-                for name in wb.sheetnames:
-                    if name.startswith("_"):
-                        continue
-                    apply_categories_to_sheet(wb[name], cats)
+            if write_analysis:
+                write_categories_sheet(wb, cats)
+                if sync_existing_tabs:
+                    for name in wb.sheetnames:
+                        if name.startswith("_"):
+                            continue
+                        apply_categories_to_sheet(wb[name], cats)
+            used: set[str] = set()
             for service in plan.services:
-                tabs.append(add_service_tab(wb, service, cats))
-            wb.save(analysis_path)
+                if write_analysis:
+                    tab = reuse_or_add_tab(wb, service, cats, used)
+                else:
+                    tab = find_matching_tab(wb, service, used)
+                    if tab:
+                        used.add(tab)
+                if tab:
+                    tabs.append(tab)
+                    amounts_by_service.append(amounts_for_categories(wb[tab], cats))
+                else:
+                    amounts_by_service.append([0.0] * len(cats))
+            if write_analysis:
+                wb.save(analysis_path)
         finally:
-            wb.close()
+            if wb is not None:
+                wb.close()
 
     if write_report:
         report_path = output_dir / plan.report_filename()
-        build_weekly_report(plan, cats, report_path)
+        build_weekly_report(plan, cats, report_path, amounts_by_service)
 
     return GenerateResult(
         analysis_path=analysis_path,
